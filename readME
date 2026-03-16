@@ -10,13 +10,13 @@ SameSite flags to minimize the risk of session hijacking. The project also inclu
 uploads, audit logging, and CORS restrictions. Overall, Bespoke Health aims to provide a secure 
 and reliable environment for managing hospital operations and protecting user data. 
 
-Demo video: https://drive.google.com/drive/folders/1w3vnPeciZVkPuy540A-IXdNpCKSbl_LW
+![Demo video:](https://drive.google.com/drive/folders/1w3vnPeciZVkPuy540A-IXdNpCKSbl_LW)
 
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/1.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/2.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/3.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/4.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/5.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/6.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/7.png?raw=true)
-![Screenshot](https://github.com/Ayush-Adhikrii/BespokeHealth/blob/main/frontend/public/screenshots/8.png?raw=true)
+
+![Homegape](frontend/public/screenshots/8.png)
+![Login](frontend/public/screenshots/2.png)
+![Signup](frontend/public/screenshots/3.png)
+![Password Security](frontend/public/screenshots/4.png)
+![Update Password](frontend/public/screenshots/5.png)
+![Activity Log](frontend/public/screenshots/6.png)
+![Filetype Security](frontend/public/screenshots/7.png)
