@@ -12,11 +12,10 @@ and reliable environment for managing hospital operations and protecting user da
 
 ![Demo video:](https://drive.google.com/drive/folders/1w3vnPeciZVkPuy540A-IXdNpCKSbl_LW)
 
-
-<image-card alt="Homepage" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/8.png" ></image-card>
-<image-card alt="Login" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/2.png" ></image-card>
-<image-card alt="Signup" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/3.png" ></image-card>
-<image-card alt="Password Security" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/4.png" ></image-card>
-<image-card alt="Update Password" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/5.png" ></image-card>
-<image-card alt="Activity Log" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/6.png" ></image-card>
-<image-card alt="Filetype Security" src="https://raw.githubusercontent.com/Ayush-Adhikrii/BespokeHealth/main/frontend/public/screenshots/7.png" ></image-card>
+![Homepage](./frontend/public/screenshots/8.png)
+![Login](./frontend/public/screenshots/2.png)
+![Signup](./frontend/public/screenshots/3.png)
+![Password Security](./frontend/public/screenshots/4.png)
+![Update Password](./frontend/public/screenshots/5.png)
+![Activity Log](./frontend/public/screenshots/6.png)
+![Filetype Security](./frontend/public/screenshots/7.png)
