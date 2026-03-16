@@ -1,1 +1,14 @@
-a simple healthcare management system made with FERN stack with added security measures
+“Bespoke Health” is a secure web-based hospital management system developed to meet the needs 
+of healthcare institutions like hospitals and clinics while making sure that the site is safe form 
+unwanted  harm.  Built  using  Node.js,  Express,  and  PostgreSQL,  the 
+architecture follows industry standards. Since the application deals with personal and medical 
+records, the primary focus was on integrating security features from the ground up. This includes 
+JWT-based authentication, RBAC for different user types (admin, doctor, and patient), CSRF 
+protection,  input  validation,  rate  limiting,  and  secure  password  reset  mechanisms.  HTTPS  is 
+enforced  using  TLS  certificates,  and  all  cookies  are  configured  with  Secure,  HttpOnly,  and 
+SameSite flags to minimize the risk of session hijacking. The project also includes secure file 
+uploads, audit logging, and CORS restrictions. Overall, Bespoke Health aims to provide a secure 
+and reliable environment for managing hospital operations and protecting user data. 
+
+Demo video: https://drive.google.com/drive/folders/1w3vnPeciZVkPuy540A-IXdNpCKSbl_LW
+
