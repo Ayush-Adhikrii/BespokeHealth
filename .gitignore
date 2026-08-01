@@ -1,0 +1,8 @@
+# Repo-wide safety net. Each of frontend/ and backend/ also has its own
+# .gitignore scoped to that folder -- these root rules are a second layer
+# so the most sensitive paths (secrets, dependency trees) are excluded
+# even if a nested .gitignore is ever missing, misnamed, or edited wrong.
+/frontend/node_modules
+/frontend/.env
+/backend/node_modules
+/backend/.env
