@@ -1,6 +1,7 @@
 require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 const { PrismaClient } = require("@prisma/client");
 const { sendVerificationEmail, sendForgotPasswordEmail } = require("../utils/email");
 const { generateOTP, verifyOTP } = require("../utils/otp");
@@ -8,15 +9,37 @@ const { logActivity } = require("../utils/activityLogger");
 
 const prisma = new PrismaClient();
 
+const verifyCaptcha = async (token) => {
+  if (!token) return false;
+  try {
+    const response = await axios.post(
+      "https://www.google.com/recaptcha/api/siteverify",
+      null,
+      { params: { secret: process.env.RECAPTCHA_SECRET_KEY, response: token } }
+    );
+    return response.data.success === true;
+  } catch (error) {
+    console.error("CAPTCHA verification request failed:", error.message);
+    return false;
+  }
+};
+
 const signup = async (req, res) => {
-  const { name, email, password, role, nmc_number, speciality, educational_qualification, cv_url } = req.body;
+  const { name, email, password, role, nmc_number, speciality, educational_qualification, cv_url, years_of_experience, captchaToken } = req.body;
 
   try {
+    const captchaValid = await verifyCaptcha(captchaToken);
+    if (!captchaValid) {
+      return res.status(400).json({ error: "CAPTCHA verification failed. Please try again." });
+    }
+
     const existingUser = await prisma.users.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: "Email already registered" });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+    const experience = parseInt(years_of_experience);
+
     const user = await prisma.users.create({
       data: {
         name,
@@ -27,6 +50,7 @@ const signup = async (req, res) => {
     });
 
     if (role === "Doctor") {
+      const imageUrl = req.file ? `uploads/doctors/${req.file.filename}` : null;
       await prisma.doctor.create({
         data: {
           userId: user.id,
@@ -34,6 +58,8 @@ const signup = async (req, res) => {
           speciality,
           educational_qualification,
           cv_url: cv_url || null,
+          years_of_experience: experience,
+          image_url: imageUrl,
         },
       });
     } else if (role === "Patient") {
@@ -94,7 +120,9 @@ const verifyEmail = async (req, res) => {
     if (tempDeviceId) {
       const trustedDevice = await prisma.trustedDevices.upsert({
         where: { deviceId: tempDeviceId },
-        update: {},
+        update: {
+          userId: user.id,
+        },
         create: {
           userId: user.id,
           deviceId: tempDeviceId,
@@ -107,7 +135,11 @@ const verifyEmail = async (req, res) => {
 
     await prisma.users.update({
       where: { email },
-      data: { email_verified: true },
+      data: {
+        email_verified: true,
+        otp: null,
+        otp_expires: null
+      },
     });
     await logActivity(user.id, 'otp_verified', `OTP verified for ${email}`);
     return res.status(200).json({ message: 'Email verified successfully' });
@@ -181,54 +213,6 @@ const login = async (req, res) => {
       });
       await sendVerificationEmail(email, otp);
       await logActivity(user.id, 'otp_sent', `OTP sent to ${email}`);
-      console.log(`OTP sent for ${email} due to email_verified = false`);
-      return res.json({
-        message: 'OTP sent to your email.',
-        requiresOtp: true,
-        email,
-      });
-    }
-
-    let requiresOtp = true;
-    const trustedDevice = await prisma.trustedDevices.findUnique({
-      where: { deviceId },
-    });
-
-    console.log(`Device check for ${email}: deviceId=${deviceId}, trustedDevice=${!!trustedDevice}, userId=${user.id}`);
-
-    if (trustedDevice && trustedDevice.userId === user.id) {
-      requiresOtp = false;
-      console.log(`Trusted device found for ${email}: ${deviceId}`);
-    } else {
-      console.log(`Device not trusted for ${email}: ${deviceId}`);
-    }
-
-    if (!rememberMe && trustedDevice) {
-      await prisma.trustedDevices.delete({
-        where: { deviceId },
-      });
-      console.log(`Removed trusted device ${deviceId} for ${email}`);
-    } else if (rememberMe && !trustedDevice) {
-      await prisma.trustedDevices.create({
-        data: {
-          userId: user.id,
-          deviceId,
-        },
-      });
-      console.log(`Added trusted device ${deviceId} for ${email}`);
-    }
-
-    if (requiresOtp) {
-      const otp = generateOTP();
-      await prisma.users.update({
-        where: { id: user.id },
-        data: {
-          otp,
-          otp_expires: new Date(Date.now() + 10 * 60 * 1000),
-        },
-      });
-      await sendVerificationEmail(email, otp);
-      console.log(`OTP sent for ${email} due to untrusted device`);
       return res.json({
         message: 'OTP sent to your email.',
         requiresOtp: true,
@@ -251,20 +235,26 @@ const login = async (req, res) => {
       {
         id: user.id,
         role: user.role,
-        kyc_status: user.kyc_status,
         doctorId: doctorProfileId,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    console.log(`Login successful for ${email}, requiresOtp: ${requiresOtp}, deviceId: ${deviceId}`);
-    await logActivity(user.id, 'login', `User ${email} logged in from device ${deviceId}`);
+    await logActivity(user.id, 'login', `User ${email} logged in`);
+
+    await prisma.users.update({
+      where: { id: user.id },
+      data: {
+        otp: null,
+        otp_expires: null
+      },
+    });
+
     res.json({
       token,
       role: user.role,
-      kyc_status: user.kyc_status,
-      requiresOtp,
+      requiresOtp: false,
       email,
     });
   } catch (error) {
@@ -294,9 +284,9 @@ const forgotPassword = async (req, res) => {
     const resetToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
-    
+
     console.log(`Generated reset token for user ${user.id}: ${resetToken.substring(0, 20)}...`);
-    
+
     await prisma.users.update({
       where: { id: user.id },
       data: {
@@ -308,7 +298,7 @@ const forgotPassword = async (req, res) => {
     console.log(`Reset token saved to database for user ${user.id}`);
     await sendForgotPasswordEmail(email, resetToken);
     console.log(`Reset password email sent to: ${email}`);
-    
+
     res.json({ message: 'Password reset email sent. Check your inbox.' });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -326,11 +316,9 @@ const changePassword = async (req, res) => {
   }
 
   try {
-    // Verify the JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('Token verified, user ID:', decoded.id);
-    
-    // Find user with the reset token
+
     const user = await prisma.users.findFirst({
       where: {
         id: decoded.id,
@@ -346,7 +334,6 @@ const changePassword = async (req, res) => {
 
     console.log('User found:', user.id, user.email);
 
-    // Check password history (last 5 passwords)
     const passwordHistory = await prisma.passwordHistory.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -357,16 +344,14 @@ const changePassword = async (req, res) => {
       const isPasswordMatch = await bcrypt.compare(newPassword, historyEntry.password);
       if (isPasswordMatch) {
         console.log('Password matches history');
-        return res.status(400).json({ 
-          error: 'New password cannot be any of your last 5 passwords. Please choose a different password.' 
+        return res.status(400).json({
+          error: 'New password cannot be any of your last 5 passwords. Please choose a different password.'
         });
       }
     }
 
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-    // Add current password to history
+
     await prisma.passwordHistory.create({
       data: {
         userId: user.id,
@@ -423,14 +408,14 @@ const changePasswordWithCurrent = async (req, res) => {
     for (const historyEntry of passwordHistory) {
       const isPasswordMatch = await bcrypt.compare(newPassword, historyEntry.password);
       if (isPasswordMatch) {
-        return res.status(400).json({ 
-          error: 'New password cannot be any of your last 5 passwords. Please choose a different password.' 
+        return res.status(400).json({
+          error: 'New password cannot be any of your last 5 passwords. Please choose a different password.'
         });
       }
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
+
     await prisma.passwordHistory.create({
       data: {
         userId: user.id,
@@ -460,9 +445,10 @@ const getProfile = async (req, res) => {
         name: true,
         email: true,
         role: true,
-        kyc_status: true,
         email_verified: true,
         created_at: true,
+        doctor: true,
+        patient: true,
       },
     });
 
@@ -470,7 +456,17 @@ const getProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    const { doctor, patient, ...userFields } = user;
+
+    if (doctor) {
+      doctor.image_url = `${req.protocol}://${req.get('host')}/api/${doctor.image_url || 'uploads/doctors/doctor.png'}`;
+    }
+
+    res.json({
+      ...userFields,
+      doctorProfile: doctor || null,
+      patientProfile: patient || null,
+    });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to get profile' });
@@ -478,7 +474,7 @@ const getProfile = async (req, res) => {
 };
 
 const updateProfile = async (req, res) => {
-  const { name, email } = req.body;
+  const { name, email, doctorProfile, patientProfile } = req.body;
 
   try {
     const existingUser = await prisma.users.findUnique({
@@ -493,6 +489,30 @@ const updateProfile = async (req, res) => {
       where: { id: req.user.id },
       data: { name, email },
     });
+
+    if (req.user.role === 'Doctor' && doctorProfile) {
+      const experience = parseInt(doctorProfile.years_of_experience);
+      await prisma.doctor.update({
+        where: { userId: req.user.id },
+        data: {
+          nmc_number: doctorProfile.nmc_number,
+          speciality: doctorProfile.speciality,
+          educational_qualification: doctorProfile.educational_qualification,
+          years_of_experience: isNaN(experience) ? undefined : experience,
+          former_organisation: doctorProfile.former_organisation || null,
+          cv_url: doctorProfile.cv_url || null,
+        },
+      });
+    } else if (req.user.role === 'Patient' && patientProfile) {
+      await prisma.patient.update({
+        where: { userId: req.user.id },
+        data: {
+          phone_number: patientProfile.phone_number || null,
+          date_of_birth: patientProfile.date_of_birth ? new Date(patientProfile.date_of_birth) : null,
+          gender: patientProfile.gender || null,
+        },
+      });
+    }
 
     await logActivity(req.user.id, 'profile_updated', 'Profile updated');
     res.json({ message: 'Profile updated successfully' });
