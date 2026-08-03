@@ -29,3 +29,15 @@ export const getDoctorById = async (doctorId) => {
     throw error.response?.data || { error: "Failed to fetch doctor details" };
   }
 };
+
+
+export const uploadDoctorPhoto = async (photoFile) => {
+  try {
+    const formData = new FormData();
+    formData.append("photo", photoFile);
+    const response = await API.post("/doctors/me/photo", formData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: "Failed to upload photo" };
+  }
+};

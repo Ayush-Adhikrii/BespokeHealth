@@ -8,12 +8,12 @@ const updateConsultationNotes = async (req, res) => {
   const rawNotes = req.body.notes;
   const doctorId = req.user.doctorProfile.id;
 
-  if (!rawNotes || typeof rawNotes !== "string") {
-    return res.status(400).json({ error: "Notes content is required" });
+  if (rawNotes !== undefined && typeof rawNotes !== "string") {
+    return res.status(400).json({ error: "Notes must be a string" });
   }
 
   const appointmentId = validator.isInt(rawAppointmentId + "") ? parseInt(rawAppointmentId) : null;
-  const notes = validator.escape(rawNotes);
+  const notes = rawNotes ? validator.escape(rawNotes) : "";
 
   if (!appointmentId) {
     return res.status(400).json({ error: "Invalid appointment ID" });

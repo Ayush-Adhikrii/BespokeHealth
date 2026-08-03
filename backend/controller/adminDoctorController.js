@@ -10,6 +10,10 @@ const validate = (req, res, next) => {
   next();
 };
 
+const DEFAULT_DOCTOR_IMAGE = "uploads/doctors/doctor.png";
+const buildImageUrl = (req, image_url) =>
+  `${req.protocol}://${req.get("host")}/api/${image_url || DEFAULT_DOCTOR_IMAGE}`;
+
 const getAllDoctors = [
   query('page').optional().isInt({ min: 1 }),
   query('limit').optional().isInt({ min: 1 }),
@@ -43,11 +47,10 @@ const getAllDoctors = [
         where.speciality = { equals: speciality, mode: "insensitive" };
       }
 
-      if (status) {
-        where.user = {
-          ...where.user,
-          kyc_status: status
-        };
+      if (status === 'active') {
+        where.is_active = true;
+      } else if (status === 'inactive' || status === 'suspended') {
+        where.is_active = false;
       }
 
       const doctors = await prisma.doctor.findMany({
@@ -56,7 +59,7 @@ const getAllDoctors = [
           user: {
             select: {
               id: true, name: true, email: true, role: true,
-              created_at: true, kyc_status: true, email_verified: true
+              created_at: true, email_verified: true
             }
           },
           _count: {
@@ -82,8 +85,13 @@ const getAllDoctors = [
 
       const totalPages = Math.ceil(totalDoctors / limit);
 
+      const doctorsWithImages = doctors.map((doctor) => ({
+        ...doctor,
+        image_url: buildImageUrl(req, doctor.image_url),
+      }));
+
       res.status(200).json({
-        doctors,
+        doctors: doctorsWithImages,
         specialities: specialities.map(s => s.speciality).filter(Boolean),
         pagination: {
           totalItems: totalDoctors,
@@ -114,7 +122,7 @@ const getDoctorDetails = [
           user: {
             select: {
               id: true, name: true, email: true, role: true,
-              kyc_status: true, created_at: true
+              created_at: true
             }
           },
           appointments: {
@@ -149,8 +157,14 @@ const getDoctorDetails = [
       }
 
       const totalAppointments = doctor._count.appointments;
-      const completedAppointments = doctor.appointments.filter(a => a.status === "completed").length;
-      const cancelledAppointments = doctor.appointments.filter(a => a.status === "cancelled").length;
+      const [completedAppointments, cancelledAppointments, revenueAgg] = await Promise.all([
+        prisma.appointment.count({ where: { doctor_id: doctor.id, status: "completed" } }),
+        prisma.appointment.count({ where: { doctor_id: doctor.id, status: "cancelled" } }),
+        prisma.payment.aggregate({
+          _sum: { amount: true },
+          where: { appointment: { doctor_id: doctor.id }, status: "completed" },
+        }),
+      ]);
 
       const metrics = {
         totalAppointments,
@@ -158,10 +172,10 @@ const getDoctorDetails = [
         cancelledAppointments,
         completionRate: totalAppointments ? (completedAppointments / totalAppointments * 100).toFixed(2) : 0,
         cancellationRate: totalAppointments ? (cancelledAppointments / totalAppointments * 100).toFixed(2) : 0,
-        totalRevenue: doctor.appointments
-          .filter(a => a.payment)
-          .reduce((sum, a) => sum + (a.payment?.amount || 0), 0)
+        totalRevenue: revenueAgg._sum.amount || 0,
       };
+
+      doctor.image_url = buildImageUrl(req, doctor.image_url);
 
       res.status(200).json({ doctor, metrics });
     } catch (error) {
@@ -192,14 +206,10 @@ const updateDoctorStatus = [
           throw new Error("Doctor not found");
         }
 
-        await prisma.users.update({
-          where: { id: doctor.userId },
-          data: { kyc_status: status }
-        });
-
         return prisma.doctor.update({
           where: { id: parseInt(id) },
           data: {
+            is_active: status === 'active',
             ...(notes && { admin_notes: notes })
           },
           include: {
@@ -207,8 +217,7 @@ const updateDoctorStatus = [
               select: {
                 id: true,
                 name: true,
-                email: true,
-                kyc_status: true
+                email: true
               }
             }
           }

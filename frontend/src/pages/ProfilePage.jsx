@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
 import API from "../utils/axios";
 import DashboardLayout from "../components/layouts/DashboardLayout";
+import { uploadDoctorPhoto } from "../services/DoctorService";
+import DoctorAvatar from "../components/common/DoctorAvatar";
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -19,6 +21,7 @@ const ProfilePage = () => {
   });
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -35,6 +38,43 @@ const ProfilePage = () => {
       toast.error("Failed to load profile");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+      toast.error("Profile photo must be a JPG or PNG image");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile photo must be smaller than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      const response = await uploadDoctorPhoto(file);
+      setProfile((prev) => ({
+        ...prev,
+        doctorProfile: { ...prev.doctorProfile, image_url: response.image_url },
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        doctorProfile: { ...prev.doctorProfile, image_url: response.image_url },
+      }));
+      toast.success("Profile photo updated");
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast.error(error.error || "Failed to upload photo");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
     }
   };
 
@@ -90,7 +130,6 @@ const ProfilePage = () => {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!passwordData.currentPassword) {
       toast.error("Please enter your current password");
       return;
@@ -116,7 +155,6 @@ const ProfilePage = () => {
       return;
     }
 
-    // Password strength validation
     const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
     if (!passwordStrengthRegex.test(passwordData.newPassword)) {
       toast.error("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character");
@@ -143,7 +181,6 @@ const ProfilePage = () => {
       console.error("Error changing password:", error);
       const errorMessage = error.response?.data?.error || "Failed to change password";
       
-      // Show specific message for password history validation
       if (errorMessage.includes("last 5 passwords")) {
         toast.error("Password cannot be any of your last 5 passwords. Please choose a different password.");
       } else {
@@ -191,7 +228,7 @@ const ProfilePage = () => {
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -209,7 +246,7 @@ const ProfilePage = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="bg-white shadow rounded-lg">
-            {/* Basic Information */}
+            {}
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
             </div>
@@ -246,13 +283,41 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Role-specific Information */}
+            {}
             {profile.role === "Doctor" && profile.doctorProfile && (
               <>
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h2 className="text-lg font-semibold text-gray-900">Professional Information</h2>
                 </div>
                 <div className="px-6 py-4 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="border border-gray-300 rounded-full">
+                      <DoctorAvatar
+                        name={profile.name}
+                        imageUrl={profile.doctorProfile.image_url}
+                        sizeClass="h-20 w-20"
+                        textClass="text-2xl"
+                        fallbackClass="bg-gray-100 text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="profile-photo"
+                        className="inline-block px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors"
+                      >
+                        {uploadingPhoto ? "Uploading..." : "Change Photo"}
+                      </label>
+                      <input
+                        id="profile-photo"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png"
+                        className="hidden"
+                        disabled={uploadingPhoto}
+                        onChange={handlePhotoChange}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">JPG or PNG, up to 5MB</p>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -354,6 +419,35 @@ const ProfilePage = () => {
                         <p className="text-gray-900">{profile.doctorProfile.former_organisation || "Not provided"}</p>
                       )}
                     </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        CV/Resume URL
+                      </label>
+                      {editing ? (
+                        <input
+                          type="url"
+                          name="cv_url"
+                          value={formData.doctorProfile?.cv_url || ""}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            doctorProfile: { ...prev.doctorProfile, cv_url: e.target.value }
+                          }))}
+                          placeholder="https://example.com/my-cv.pdf"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : profile.doctorProfile.cv_url ? (
+                        <a
+                          href={profile.doctorProfile.cv_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          View CV
+                        </a>
+                      ) : (
+                        <p className="text-gray-900">Not provided</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </>
@@ -432,7 +526,7 @@ const ProfilePage = () => {
               </>
             )}
 
-            {/* Password Change Section */}
+            {}
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Password</h2>
@@ -521,7 +615,7 @@ const ProfilePage = () => {
               </div>
             )}
 
-            {/* Save Button */}
+            {}
             {editing && (
               <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                 <div className="flex justify-end space-x-3">
@@ -552,4 +646,4 @@ const ProfilePage = () => {
   );
 };
 
-export default ProfilePage; 
+export default ProfilePage;

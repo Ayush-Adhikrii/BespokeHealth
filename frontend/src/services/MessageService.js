@@ -60,6 +60,15 @@ class MessageService {
       throw error;
     }
   }
+
+  async getUnreadCount() {
+    try {
+      const response = await API.get("/appointments/messages/unread-count");
+      return response.data.count || 0;
+    } catch {
+      return 0;
+    }
+  }
 }
 
 export default new MessageService();

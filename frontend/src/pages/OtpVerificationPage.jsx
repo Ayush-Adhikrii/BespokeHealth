@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getOrCreateDeviceId } from "../utils/deviceFingerprint";
 
 const OtpVerificationPage = () => {
   const [otp, setOtp] = useState("");
@@ -66,7 +67,8 @@ const OtpVerificationPage = () => {
     }
     
     try {
-      const response = await verifyEmail(email, otp);
+      const deviceId = getOrCreateDeviceId();
+      const response = await verifyEmail(email, otp, deviceId);
       setSuccessMessage(response.message);
       
       

@@ -1,5 +1,5 @@
 
-import axios from "axios";  
+import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getOrCreateDeviceId } from "../utils/deviceFingerprint";
 import { setCookie, getCookie, removeCookie, clearAllLocalStorage, clearAllSessionStorage } from "../utils/cookie";
@@ -66,7 +66,10 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await axios.post(`${API_URL}/auth/signup`, data);
+      const isFormData = data instanceof FormData;
+      const res = await axios.post(`${API_URL}/auth/signup`, data, {
+        headers: isFormData ? { "Content-Type": "multipart/form-data" } : undefined,
+      });
       return res.data;
     } catch (err) {
       const details = err.response?.data?.details || null;
@@ -115,12 +118,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedFields) => {
+    setUser((prev) => {
+      const next = { ...prev, ...updatedFields };
+      setCookie("user", JSON.stringify(next), 30);
+      return next;
+    });
+  };
+
   const logout = () => {
     removeCookie("token");
     removeCookie("user");
     delete axios.defaults.headers.common["Authorization"];
     setUser(null);
-    // Clear all localStorage and sessionStorage data
+
     clearAllLocalStorage();
     clearAllSessionStorage();
   };
@@ -165,6 +176,7 @@ export const AuthProvider = ({ children }) => {
         verifyEmail,
         login,
         logout,
+        updateUser,
         forgotPassword,
         changePassword,
       }}

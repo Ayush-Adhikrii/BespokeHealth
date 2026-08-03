@@ -359,7 +359,6 @@ const changePassword = async (req, res) => {
       },
     });
 
-    // Update user with new password and clear reset token
     await prisma.users.update({
       where: { id: user.id },
       data: {

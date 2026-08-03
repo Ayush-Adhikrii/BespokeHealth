@@ -59,7 +59,6 @@ const ResetPasswordPage = () => {
       console.error("Password reset error:", err);
       const errorMessage = err.message || "Password reset failed";
       
-      // Show specific message for password history validation
       if (errorMessage.includes("last 5 passwords")) {
         setFormError("Password cannot be any of your last 5 passwords. Please choose a different password.");
       } else {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ConfirmModal from "../common/ConfirmModal";
 
 const defaultConsultationTypes = [
   "First Visit",
@@ -9,6 +10,7 @@ const defaultConsultationTypes = [
 const ConsultationFeeManager = ({ fees = [], onSave }) => {
   const [feesList, setFeesList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [feePendingRemoval, setFeePendingRemoval] = useState(null);
 
   
   useEffect(() => {
@@ -48,7 +50,12 @@ const ConsultationFeeManager = ({ fees = [], onSave }) => {
 
   
   const handleRemoveFee = (id) => {
-    setFeesList(feesList.filter((fee) => fee.id !== id));
+    setFeePendingRemoval(feesList.find((fee) => fee.id === id) || null);
+  };
+
+  const confirmRemoveFee = () => {
+    setFeesList(feesList.filter((fee) => fee.id !== feePendingRemoval.id));
+    setFeePendingRemoval(null);
   };
 
   
@@ -219,6 +226,16 @@ const ConsultationFeeManager = ({ fees = [], onSave }) => {
           </button>
         </div>
       </form>
+
+      {feePendingRemoval && (
+        <ConfirmModal
+          title="Remove consultation fee?"
+          message={`Remove the "${feePendingRemoval.consultation_type || "Untitled"}" fee (Rs. ${feePendingRemoval.amount})? Patients won't be able to book this consultation type until you add it back and save.`}
+          confirmLabel="Remove"
+          onConfirm={confirmRemoveFee}
+          onCancel={() => setFeePendingRemoval(null)}
+        />
+      )}
     </div>
   );
 };

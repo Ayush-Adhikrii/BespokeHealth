@@ -3,6 +3,7 @@ const router = express.Router();
 const doctorController = require("../controller/doctorController");
 const availabilityController = require("../controller/availabilityController");
 const { authenticateToken, authorizeRoles } = require("../middleware/auth");
+const { uploadDoctorPhoto } = require("../utils/fileUpload");
 
 
 router.get("/", doctorController.getAllDoctors);
@@ -44,6 +45,14 @@ router.get(
   authenticateToken,
   authorizeRoles(["Doctor"]),
   doctorController.getPatientInsights
+);
+
+router.post(
+  "/me/photo",
+  authenticateToken,
+  authorizeRoles(["Doctor"]),
+  uploadDoctorPhoto.single("photo"),
+  doctorController.uploadDoctorPhoto
 );
 
 module.exports = router;

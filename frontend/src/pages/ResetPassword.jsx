@@ -29,42 +29,36 @@ const ResetPassword = () => {
     let score = 0;
     let feedback = [];
 
-    // Length check
     if (password.length >= 8) {
       score += 1;
     } else {
       feedback.push("At least 8 characters");
     }
 
-    // Uppercase check
     if (/[A-Z]/.test(password)) {
       score += 1;
     } else {
       feedback.push("At least one uppercase letter");
     }
 
-    // Lowercase check
     if (/[a-z]/.test(password)) {
       score += 1;
     } else {
       feedback.push("At least one lowercase letter");
     }
 
-    // Number check
     if (/\d/.test(password)) {
       score += 1;
     } else {
       feedback.push("At least one number");
     }
 
-    // Special character check
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       score += 1;
     } else {
       feedback.push("At least one special character");
     }
 
-    // No common patterns
     const commonPatterns = ['password', '123456', 'qwerty', 'admin', 'letmein'];
     const hasCommonPattern = commonPatterns.some(pattern => 
       password.toLowerCase().includes(pattern)
@@ -207,7 +201,7 @@ const ResetPassword = () => {
                   onChange={handlePasswordChange}
                 />
                 
-                {/* Password Strength Meter */}
+                {}
                 {password && (
                   <div className="mt-2">
                     <div className="flex items-center justify-between text-sm">

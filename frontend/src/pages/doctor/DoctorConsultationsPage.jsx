@@ -42,7 +42,7 @@ const DoctorConsultationsPage = () => {
       };
       
       if (activeTab !== "all") {
-        filters.status = activeTab;
+        filters.status = activeTab === "scheduled" ? "confirmed" : activeTab;
       }
       
       if (selectedDate) {
@@ -102,7 +102,12 @@ const DoctorConsultationsPage = () => {
       setNotes("");
       fetchConsultations();
     } catch (error) {
-      toast.error("Failed to complete appointment");
+      const msg = error?.response?.data?.error || "Failed to complete appointment";
+      toast.error(msg);
+      if (error?.response?.status === 400) {
+        setIsCompleteModalOpen(false);
+        openPrescriptionModal(selectedAppointment);
+      }
     }
   };
   
@@ -153,7 +158,7 @@ const DoctorConsultationsPage = () => {
   const handlePrescriptionSubmit = async () => {
     try {
       await ConsultationService.createOrUpdatePrescription(
-        selectedAppointment.id, 
+        selectedAppointment.id,
         prescription
       );
       toast.success("Prescription saved successfully");
@@ -167,7 +172,8 @@ const DoctorConsultationsPage = () => {
       });
       fetchConsultations();
     } catch (error) {
-      toast.error("Failed to save prescription");
+      const msg = error?.response?.data?.error || error?.message || "Failed to save prescription";
+      toast.error(msg);
     }
   };
   
@@ -398,7 +404,7 @@ const DoctorConsultationsPage = () => {
 
                       
                       <div className="mt-6 flex justify-end space-x-3">
-                        {consultation.status === "scheduled" ? (
+                        {consultation.status === "confirmed" ? (
                           <>
                             <button 
                               onClick={() => {
@@ -913,25 +919,45 @@ const DoctorConsultationsPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      className="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200"
-                      onClick={() => setIsPrescriptionModalOpen(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                      onClick={handlePrescriptionSubmit}
-                      disabled={!prescription.diagnosis || 
-                                prescription.medications.some(med => 
-                                  !med.name || !med.dosage || !med.frequency || !med.duration)}
-                    >
-                      Save Prescription
-                    </button>
-                  </div>
+                  {(() => {
+                    const missingDiagnosis = !prescription.diagnosis.trim();
+                    const badMeds = prescription.medications.some(
+                      (med) => !med.name || !med.dosage || !med.frequency || !med.duration
+                    );
+                    const isDisabled = missingDiagnosis || badMeds;
+                    return (
+                      <>
+                        {isDisabled && (
+                          <p className="mt-4 text-sm text-red-500">
+                            {missingDiagnosis
+                              ? "Diagnosis is required."
+                              : "All medication fields (Name, Dosage, Frequency, Duration) are required."}
+                          </p>
+                        )}
+                        <div className="mt-3 flex justify-end space-x-3">
+                          <button
+                            type="button"
+                            className="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200"
+                            onClick={() => setIsPrescriptionModalOpen(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className={`inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white transition-colors ${
+                              isDisabled
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+                            onClick={isDisabled ? undefined : handlePrescriptionSubmit}
+                            disabled={isDisabled}
+                          >
+                            Save Prescription
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </Dialog.Panel>
               </Transition.Child>
             </div>

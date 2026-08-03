@@ -74,7 +74,7 @@ const AppointmentBookingPage = () => {
       const response = await bookAppointment(bookingData);
       
       
-      navigate("/payment/process", {
+      navigate("/payment", {
         state: {
           appointment_id: response.appointment_id,
           doctor_name: response.doctor_name,

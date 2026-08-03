@@ -37,22 +37,30 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setLoading(true);
+      setLoading(true);
 
-        
-        const kycData = await getKYCsForReview(1, 5);
-        setPendingKYCs(kycData);
+      const [kycResult, analyticsResult] = await Promise.allSettled([
+        getKYCsForReview(1, 5),
+        AnalyticsService.getAnalyticsOverview(),
+      ]);
 
-        
-        const analytics = await AnalyticsService.getAnalyticsOverview();
-        setAnalyticsData(analytics);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        toast.error("Failed to load some dashboard data");
-      } finally {
-        setLoading(false);
+      if (kycResult.status === "fulfilled") {
+        setPendingKYCs(kycResult.value);
+      } else {
+        console.error("Error fetching pending KYCs:", kycResult.reason);
       }
+
+      if (analyticsResult.status === "fulfilled") {
+        setAnalyticsData(analyticsResult.value);
+      } else {
+        console.error("Error fetching analytics overview:", analyticsResult.reason);
+      }
+
+      if (kycResult.status === "rejected" || analyticsResult.status === "rejected") {
+        toast.error("Failed to load some dashboard data");
+      }
+
+      setLoading(false);
     };
 
     fetchData();

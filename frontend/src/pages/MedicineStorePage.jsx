@@ -4,19 +4,34 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import DashboardLayout from "../components/layouts/DashboardLayout";
 import API from "../utils/axios";
+import CorsImage from "../components/common/CorsImage";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import MedicineOrderService from "../services/MedicineOrderService";
 
 const MedicineStorePage = () => {
+  const { addItem } = useCart();
+  const { user } = useAuth();
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showInStock, setShowInStock] = useState(false);
+  const [eligibleMedicineIds, setEligibleMedicineIds] = useState(new Set());
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
     pages: 1,
   });
+
+
+  useEffect(() => {
+    if (user?.role !== "Patient") return;
+    MedicineOrderService.getPrescriptionEligibility()
+      .then((data) => setEligibleMedicineIds(new Set(data.eligible_medicine_ids)))
+      .catch((error) => console.error("Error fetching prescription eligibility:", error));
+  }, [user?.role]);
 
   
   useEffect(() => {
@@ -52,6 +67,7 @@ const MedicineStorePage = () => {
 
         const response = await API.get("/medicines", { params });
 
+        console.log("Medicine data received:", response.data.medicines);
         setMedicines(response.data.medicines);
         setPagination({
           total: response.data.pagination.total,
@@ -263,10 +279,16 @@ const MedicineStorePage = () => {
                     >
                       <div className="relative h-48 bg-gray-200">
                         {medicine.image_url ? (
-                          <img
-                                  src={medicine.image_url.replace('/uploads/', '/api/uploads/')}
+                          <CorsImage
+                            src={medicine.image_url}
                             alt={medicine.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.log("Failed to load image:", medicine.image_url);
+                            }}
+                            onLoad={() => {
+                              console.log("Image loaded successfully:", medicine.image_url);
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-indigo-50">
@@ -367,6 +389,27 @@ const MedicineStorePage = () => {
                             Details
                           </Link>
                         </div>
+
+                        {medicine.prescription_required && !eligibleMedicineIds.has(medicine.id) ? (
+                          <Link
+                            to="/dashboard/prescriptions"
+                            className="mt-3 flex items-center justify-center w-full px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                          >
+                            Requires a doctor's prescription
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!medicine.in_stock}
+                            onClick={() => {
+                              addItem(medicine, 1);
+                              toast.success(`${medicine.name} added to cart`);
+                            }}
+                            className="mt-3 w-full px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {medicine.in_stock ? "Add to Cart" : "Out of Stock"}
+                          </button>
+                        )}
                       </div>
                     </motion.div>
                   ))}

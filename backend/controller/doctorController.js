@@ -1,6 +1,11 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+const DEFAULT_DOCTOR_IMAGE = "uploads/doctors/doctor.png";
+
+const buildImageUrl = (req, image_url) =>
+  `${req.protocol}://${req.get("host")}/api/${image_url || DEFAULT_DOCTOR_IMAGE}`;
+
 const getAllDoctors = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -19,9 +24,7 @@ const getAllDoctors = async (req, res) => {
     const searchTerm = req.query.search;
 
     let whereClause = {
-      user: {
-        kyc_status: "Approved",
-      },
+      is_active: true,
     };
 
     if (speciality) {
@@ -65,7 +68,6 @@ const getAllDoctors = async (req, res) => {
       ];
     }
 
-    
     const doctors = await prisma.doctor.findMany({
       where: whereClause,
       include: {
@@ -74,10 +76,9 @@ const getAllDoctors = async (req, res) => {
             id: true,
             name: true,
             email: true,
-            kyc_status: true,
           },
         },
-        consultation_fees: true, 
+        consultation_fees: true,
       },
       orderBy:
         sortBy === "name"
@@ -95,7 +96,10 @@ const getAllDoctors = async (req, res) => {
       educational_qualification: doctor.educational_qualification,
       years_of_experience: doctor.years_of_experience,
       former_organisation: doctor.former_organisation || null,
-      consultation_fees: doctor.consultation_fees, 
+      image_url: buildImageUrl(req, doctor.image_url),
+      avg_rating: doctor.avg_rating,
+      rating_count: doctor.rating_count,
+      consultation_fees: doctor.consultation_fees,
     }));
 
     const totalCount = await prisma.doctor.count({
@@ -118,7 +122,7 @@ const getDoctorById = async (req, res) => {
   const { doctorId } = req.params;
 
   try {
-    
+
     if (!doctorId) {
       return res.status(400).json({ error: "Doctor ID is required" });
     }
@@ -129,7 +133,6 @@ const getDoctorById = async (req, res) => {
       return res.status(400).json({ error: "Invalid doctor ID format" });
     }
 
-    
     const doctor = await prisma.doctor.findUnique({
       where: {
         id: doctorIdInt,
@@ -140,7 +143,6 @@ const getDoctorById = async (req, res) => {
             id: true,
             name: true,
             email: true,
-            kyc_status: true,
           },
         },
         consultation_fees: true,
@@ -159,13 +161,14 @@ const getDoctorById = async (req, res) => {
       return res.status(404).json({ error: "Doctor not found" });
     }
 
+    doctor.image_url = buildImageUrl(req, doctor.image_url);
+
     res.status(200).json(doctor);
   } catch (error) {
     console.error("Get doctor by ID error:", error);
     res.status(500).json({ error: "Failed to retrieve doctor" });
   }
 };
-
 
 const getDoctorsBySpeciality = async (req, res) => {
   const { speciality } = req.params;
@@ -174,9 +177,7 @@ const getDoctorsBySpeciality = async (req, res) => {
     const doctors = await prisma.doctor.findMany({
       where: {
         speciality,
-        user: {
-          kyc_status: "Approved",
-        },
+        is_active: true,
       },
       include: {
         user: {
@@ -186,11 +187,10 @@ const getDoctorsBySpeciality = async (req, res) => {
             email: true,
           },
         },
-        consultation_fees: true, 
+        consultation_fees: true,
       },
     });
 
-    
     const formattedDoctors = doctors.map((doctor) => ({
       id: doctor.id,
       userId: doctor.userId,
@@ -199,7 +199,8 @@ const getDoctorsBySpeciality = async (req, res) => {
       educational_qualification: doctor.educational_qualification,
       years_of_experience: doctor.years_of_experience,
       former_organisation: doctor.former_organisation || null,
-      consultation_fees: doctor.consultation_fees, 
+      image_url: buildImageUrl(req, doctor.image_url),
+      consultation_fees: doctor.consultation_fees,
     }));
 
     return res.status(200).json(formattedDoctors);
@@ -211,14 +212,11 @@ const getDoctorsBySpeciality = async (req, res) => {
   }
 };
 
-
 const getAllSpecialities = async (req, res) => {
   try {
     const specialities = await prisma.doctor.findMany({
       where: {
-        user: {
-          kyc_status: "Approved",
-        },
+        is_active: true,
       },
       select: {
         speciality: true,
@@ -235,7 +233,6 @@ const getAllSpecialities = async (req, res) => {
   }
 };
 
-
 const getDoctorsByFeeRange = async (req, res) => {
   try {
     const minFee = req.query.minFee ? parseFloat(req.query.minFee) : undefined;
@@ -246,7 +243,6 @@ const getDoctorsByFeeRange = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    
     let feeFilter = {};
 
     if (minFee !== undefined) {
@@ -257,12 +253,9 @@ const getDoctorsByFeeRange = async (req, res) => {
       feeFilter.lte = maxFee;
     }
 
-    
     const doctors = await prisma.doctor.findMany({
       where: {
-        user: {
-          kyc_status: "Approved",
-        },
+        is_active: true,
         consultation_fees: {
           some: {
             consultation_type: consultationType,
@@ -284,7 +277,6 @@ const getDoctorsByFeeRange = async (req, res) => {
       take: limit,
     });
 
-    
     const formattedDoctors = doctors.map((doctor) => ({
       id: doctor.id,
       userId: doctor.userId,
@@ -293,15 +285,13 @@ const getDoctorsByFeeRange = async (req, res) => {
       educational_qualification: doctor.educational_qualification,
       years_of_experience: doctor.years_of_experience,
       former_organisation: doctor.former_organisation || null,
+      image_url: buildImageUrl(req, doctor.image_url),
       consultation_fees: doctor.consultation_fees,
     }));
 
-    
     const totalCount = await prisma.doctor.count({
       where: {
-        user: {
-          kyc_status: "Approved",
-        },
+        is_active: true,
         consultation_fees: {
           some: {
             consultation_type: consultationType,
@@ -325,17 +315,15 @@ const getDoctorsByFeeRange = async (req, res) => {
   }
 };
 
-
 const getDoctorPatients = async (req, res) => {
   try {
-    
+
     if (req.user.role !== "Doctor") {
       return res
         .status(403)
         .json({ error: "Only doctors can access this endpoint" });
     }
 
-    
     const doctor = await prisma.doctor.findFirst({
       where: {
         userId: req.user.id,
@@ -352,12 +340,10 @@ const getDoctorPatients = async (req, res) => {
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
 
-    
     let whereClause = {
       doctor_id: doctorId,
     };
 
-    
     if (search) {
       whereClause.patient = {
         user: {
@@ -369,7 +355,6 @@ const getDoctorPatients = async (req, res) => {
       };
     }
 
-    
     const appointments = await prisma.appointment.findMany({
       where: whereClause,
       include: {
@@ -392,14 +377,12 @@ const getDoctorPatients = async (req, res) => {
       take: limit,
     });
 
-    
     const totalPatients = await prisma.appointment.findMany({
       where: { doctor_id: doctorId },
       distinct: ["patient_id"],
       select: { patient_id: true },
     });
 
-    
     const patients = appointments.map((appointment) => ({
       id: appointment.patient.id,
       name: appointment.patient.user.name,
@@ -421,13 +404,12 @@ const getDoctorPatients = async (req, res) => {
   }
 };
 
-
 const getPatientDetails = async (req, res) => {
   const doctorId = req.user.doctorProfile.id;
   const { patientId } = req.params;
 
   try {
-    
+
     const hasAppointment = await prisma.appointment.findFirst({
       where: {
         doctor_id: doctorId,
@@ -441,7 +423,6 @@ const getPatientDetails = async (req, res) => {
       });
     }
 
-    
     const patient = await prisma.patient.findUnique({
       where: { id: parseInt(patientId) },
       include: {
@@ -459,7 +440,6 @@ const getPatientDetails = async (req, res) => {
       return res.status(404).json({ error: "Patient not found" });
     }
 
-    
     const appointments = await prisma.appointment.findMany({
       where: {
         doctor_id: doctorId,
@@ -476,7 +456,6 @@ const getPatientDetails = async (req, res) => {
       },
     });
 
-    
     const appointmentHistory = appointments.map((appointment) => ({
       id: appointment.id,
       date: appointment.time_slot.date.toISOString().split("T")[0],
@@ -492,7 +471,6 @@ const getPatientDetails = async (req, res) => {
       created_at: appointment.created_at,
     }));
 
-    
     const patientDetails = {
       id: patient.id,
       name: patient.user.name,
@@ -515,18 +493,24 @@ const getPatientDetails = async (req, res) => {
 
 const getGeneralStats = async (req, res) => {
   try {
+    console.log("getGeneralStats - Request user:", req.user);
+    console.log("getGeneralStats - User role:", req.user?.role);
+    console.log("getGeneralStats - Doctor profile:", req.user?.doctorProfile);
+
     if (
       !req.user ||
       req.user.role !== "Doctor" ||
       !req.user.doctorProfile ||
       !req.user.doctorProfile.id
     ) {
+      console.log("getGeneralStats - Access denied - Missing user or doctor profile");
       return res
         .status(403)
         .json({ error: "Only doctors can access this endpoint" });
     }
 
     const doctorID = req.user.doctorProfile.id;
+    console.log("getGeneralStats - Doctor ID:", doctorID);
 
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -538,14 +522,21 @@ const getGeneralStats = async (req, res) => {
       1
     );
 
-    
+    console.log("getGeneralStats - Date ranges:", {
+      today: today.toISOString(),
+      firstDayOfMonth: firstDayOfMonth.toISOString(),
+      firstDayOfPrevMonth: firstDayOfPrevMonth.toISOString()
+    });
+
+    console.log("getGeneralStats - Fetching total patients...");
     const totalPatients = await prisma.appointment.findMany({
       where: { doctor_id: doctorID },
       select: { patient_id: true },
       distinct: ["patient_id"],
     });
+    console.log("getGeneralStats - Total patients found:", totalPatients.length);
 
-    
+    console.log("getGeneralStats - Fetching new patients this month...");
     const newPatientsThisMonth = await prisma.appointment.findMany({
       where: {
         doctor_id: doctorID,
@@ -554,15 +545,17 @@ const getGeneralStats = async (req, res) => {
       select: { patient_id: true },
       distinct: ["patient_id"],
     });
+    console.log("getGeneralStats - New patients this month:", newPatientsThisMonth.length);
 
-    
+    console.log("getGeneralStats - Fetching appointment stats...");
     const appointmentStats = await prisma.appointment.groupBy({
       by: ["status"],
       where: { doctor_id: doctorID },
       _count: { id: true },
     });
+    console.log("getGeneralStats - Appointment stats:", appointmentStats);
 
-    
+    console.log("getGeneralStats - Fetching upcoming appointments...");
     const upcomingAppointments = await prisma.appointment.count({
       where: {
         doctor_id: doctorID,
@@ -572,8 +565,9 @@ const getGeneralStats = async (req, res) => {
         },
       },
     });
+    console.log("getGeneralStats - Upcoming appointments:", upcomingAppointments);
 
-    
+    console.log("getGeneralStats - Fetching current month revenue...");
     const currentMonthRevenue = await prisma.payment.aggregate({
       where: {
         appointment: {
@@ -587,6 +581,7 @@ const getGeneralStats = async (req, res) => {
       },
       _sum: { amount: true },
     });
+    console.log("getGeneralStats - Current month revenue:", currentMonthRevenue);
 
     const previousMonthRevenue = await prisma.payment.aggregate({
       where: {
@@ -601,14 +596,13 @@ const getGeneralStats = async (req, res) => {
       },
       _sum: { amount: true },
     });
+    console.log("getGeneralStats - Previous month revenue:", previousMonthRevenue);
 
-    
     const appointmentCounts = {};
     appointmentStats.forEach((stat) => {
       appointmentCounts[stat.status] = stat._count.id;
     });
 
-    
     const prevRevenue = previousMonthRevenue._sum.amount || 0;
     const currRevenue = currentMonthRevenue._sum.amount || 0;
     const revenueGrowth =
@@ -616,7 +610,7 @@ const getGeneralStats = async (req, res) => {
         ? Number((((currRevenue - prevRevenue) / prevRevenue) * 100).toFixed(2))
         : 100;
 
-    res.status(200).json({
+    const response = {
       patients: {
         total: totalPatients.length,
         newThisMonth: newPatientsThisMonth.length,
@@ -645,7 +639,10 @@ const getGeneralStats = async (req, res) => {
         previousMonth: prevRevenue,
         growth: revenueGrowth,
       },
-    });
+    };
+
+    console.log("getGeneralStats - Final response:", response);
+    res.status(200).json(response);
   } catch (error) {
     console.error("Dashboard stats error:", error);
     res.status(500).json({ error: "Failed to fetch dashboard statistics" });
@@ -654,7 +651,7 @@ const getGeneralStats = async (req, res) => {
 
 const trial = async (req, res) => {
   console.log("Trial API hit");
-  
+
   if (
     !req.user ||
     req.user.role !== "Doctor" ||
@@ -679,11 +676,10 @@ const trial = async (req, res) => {
       },
     });
 
-    
     const formattedAvailabilities = availabilities.map((slot) => ({
       id: slot.id,
       day_of_week: slot.day_of_week,
-      
+
       start_time: slot.start_time.toISOString().substring(11, 16),
       end_time: slot.end_time.toISOString().substring(11, 16),
     }));
@@ -699,21 +695,19 @@ const getAppointmentAnalytics = async (req, res) => {
   try {
     const doctorId = req.user.doctorProfile.id;
     const today = new Date();
-    
-    
+
     const startOfToday = new Date(today.setHours(0, 0, 0, 0));
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
 
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay()); 
+    startOfWeek.setDate(today.getDate() - today.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    
     const todayAppointments = await prisma.appointment.findMany({
       where: {
         doctor_id: doctorId,
@@ -735,7 +729,6 @@ const getAppointmentAnalytics = async (req, res) => {
       }
     });
 
-    
     const weekAppointments = await prisma.appointment.findMany({
       where: {
         doctor_id: doctorId,
@@ -751,7 +744,6 @@ const getAppointmentAnalytics = async (req, res) => {
       },
     });
 
-    
     const recentAppointments = await prisma.appointment.findMany({
       where: {
         doctor_id: doctorId,
@@ -769,7 +761,6 @@ const getAppointmentAnalytics = async (req, res) => {
       take: 10,
     });
 
-    
     const totalCompletedAppointments = await prisma.appointment.count({
       where: {
         doctor_id: doctorId,
@@ -794,13 +785,12 @@ const getAppointmentAnalytics = async (req, res) => {
           )
         : 0;
 
-    
     const appointmentsByDay = await prisma.appointment.findMany({
       where: {
         doctor_id: doctorId,
         time_slot: {
           date: {
-            gte: new Date(new Date().setDate(today.getDate() - 30)), 
+            gte: new Date(new Date().setDate(today.getDate() - 30)),
           },
         },
       },
@@ -828,12 +818,10 @@ const getAppointmentAnalytics = async (req, res) => {
       dayCount[dayOfWeek] = (dayCount[dayOfWeek] || 0) + 1;
     });
 
-    
     const busiestDays = Object.entries(dayCount)
       .map(([day, count]) => ({ day, count }))
       .sort((a, b) => b.count - a.count);
 
-    
     const formattedTodayAppointments = todayAppointments.map((appointment) => ({
       id: appointment.id,
       patient_name: appointment.patient.user.name,
@@ -844,7 +832,6 @@ const getAppointmentAnalytics = async (req, res) => {
       status: appointment.status,
     }));
 
-    
     const formattedRecentAppointments = recentAppointments.map(
       (appointment) => ({
         id: appointment.id,
@@ -900,7 +887,6 @@ const getPatientInsights = async (req, res) => {
   try {
     const doctorId = req.user.doctorProfile.id;
 
-    
     const patients = await prisma.appointment.findMany({
       where: { doctor_id: doctorId },
       select: {
@@ -921,7 +907,6 @@ const getPatientInsights = async (req, res) => {
       distinct: ["patient_id"],
     });
 
-    
     const genderDistribution = await prisma.patient.groupBy({
       by: ["gender"],
       where: {
@@ -932,13 +917,11 @@ const getPatientInsights = async (req, res) => {
       _count: { id: true },
     });
 
-    
     const genderStats = {};
     genderDistribution.forEach((g) => {
       genderStats[g.gender || "Not Specified"] = g._count.id;
     });
 
-    
     const patientsWithDOB = await prisma.patient.findMany({
       where: {
         id: {
@@ -971,7 +954,6 @@ const getPatientInsights = async (req, res) => {
       else ageGroups["Over 60"]++;
     });
 
-    
     const appointmentCounts = await prisma.appointment.groupBy({
       by: ["patient_id"],
       where: { doctor_id: doctorId },
@@ -985,7 +967,6 @@ const getPatientInsights = async (req, res) => {
       (p) => p._count.id === 1
     ).length;
 
-    
     const topPatients = await prisma.appointment.groupBy({
       by: ["patient_id"],
       where: { doctor_id: doctorId },
@@ -998,7 +979,6 @@ const getPatientInsights = async (req, res) => {
       take: 5,
     });
 
-    
     const topPatientsDetails = await Promise.all(
       topPatients.map(async (p) => {
         const patient = await prisma.patient.findUnique({
@@ -1022,7 +1002,6 @@ const getPatientInsights = async (req, res) => {
       })
     );
 
-    
     const newVsReturningRatio = {
       new: oneTimePatients,
       returning: returningPatients,
@@ -1053,6 +1032,31 @@ const getPatientInsights = async (req, res) => {
   }
 };
 
+const uploadDoctorPhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    const doctor = await prisma.doctor.findFirst({ where: { userId: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ error: "Doctor profile not found" });
+    }
+
+    const imageUrl = `uploads/doctors/${req.file.filename}`;
+
+    await prisma.doctor.update({
+      where: { id: doctor.id },
+      data: { image_url: imageUrl },
+    });
+
+    return res.status(200).json({ message: "Photo uploaded successfully", image_url: buildImageUrl(req, imageUrl) });
+  } catch (error) {
+    console.error("Upload doctor photo error:", error);
+    return res.status(500).json({ error: "Failed to upload photo" });
+  }
+};
+
 module.exports = {
   getGeneralStats,
   getAppointmentAnalytics,
@@ -1061,8 +1065,9 @@ module.exports = {
   getDoctorById,
   getDoctorsBySpeciality,
   getAllSpecialities,
-  getDoctorsByFeeRange, 
-  getDoctorPatients, 
-  getPatientDetails, 
+  getDoctorsByFeeRange,
+  getDoctorPatients,
+  getPatientDetails,
+  uploadDoctorPhoto,
   trial,
 };

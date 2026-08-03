@@ -1,3 +1,4 @@
+const path = require("path");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { createNotification } = require("../services/notificationService");
@@ -28,14 +29,8 @@ const submitKYC = async (req, res) => {
     }
 
     
-    const citizenship_front = req.files.citizenship_front[0].path.replace(
-      /\\/g,
-      "/"
-    );
-    const citizenship_back = req.files.citizenship_back[0].path.replace(
-      /\\/g,
-      "/"
-    );
+    const citizenship_front = `/uploads/kyc/${path.basename(req.files.citizenship_front[0].path)}`;
+    const citizenship_back = `/uploads/kyc/${path.basename(req.files.citizenship_back[0].path)}`;
 
     
     const existingKYC = await prisma.kYC.findUnique({

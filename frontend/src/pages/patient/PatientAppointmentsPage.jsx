@@ -1,12 +1,14 @@
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import AppointmentService from "../../services/AppointmentService";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 
 const PatientAppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -39,6 +41,23 @@ const PatientAppointmentsPage = () => {
       return format(parseISO(dateString), "EEEE, MMMM d, yyyy");
     } catch (error) {
       return dateString;
+    }
+  };
+
+  const handleCompletePayment = (appointment) => {
+    if (appointment.payment?.id) {
+      navigate('/payment', {
+        state: {
+          appointment_id: appointment.id,
+          doctor_name: appointment.doctor.name,
+          appointment_date: appointment.date,
+          appointment_time: appointment.start_time,
+          payment_amount: appointment.amount,
+          payment_id: appointment.payment.id
+        }
+      });
+    } else {
+      toast.error("Payment information not available");
     }
   };
 
@@ -123,8 +142,16 @@ const PatientAppointmentsPage = () => {
                       </div>
                     </div>
                     <div className="flex flex-col">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Confirmed
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        appointment.status === 'confirmed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : appointment.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {appointment.status === 'confirmed' ? 'Confirmed' : 
+                         appointment.status === 'pending' ? 'Pending Payment' : 
+                         appointment.status}
                       </span>
                     </div>
                   </div>
@@ -145,7 +172,17 @@ const PatientAppointmentsPage = () => {
                       <p className="text-sm font-medium text-gray-900">
                         NPR {appointment.amount}
                       </p>
-                      <p className="text-xs text-green-600">Paid</p>
+                      <p className={`text-xs ${
+                        appointment.payment?.status === 'completed' 
+                          ? 'text-green-600' 
+                          : appointment.payment?.status === 'pending'
+                          ? 'text-yellow-600'
+                          : 'text-gray-600'
+                      }`}>
+                        {appointment.payment?.status === 'completed' ? 'Paid' : 
+                         appointment.payment?.status === 'pending' ? 'Pending' : 
+                         'Unknown'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Booked On</p>
@@ -157,6 +194,17 @@ const PatientAppointmentsPage = () => {
                       </p>
                     </div>
                   </div>
+                  
+                  {appointment.status === 'pending' && appointment.payment?.status === 'pending' && (
+                    <div className="border-t border-gray-100 mt-4 pt-4">
+                      <button
+                        onClick={() => handleCompletePayment(appointment)}
+                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+                      >
+                        Complete Payment
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

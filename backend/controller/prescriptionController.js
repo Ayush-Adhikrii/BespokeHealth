@@ -20,7 +20,6 @@ const createOrUpdatePrescription = async (req, res) => {
     follow_up_date,
   } = req.body;
 
-  // Basic input validations
   if (typeof diagnosis !== "string" || !diagnosis.trim()) {
     return res.status(400).json({ error: "Diagnosis is required" });
   }

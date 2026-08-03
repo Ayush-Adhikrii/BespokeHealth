@@ -40,7 +40,7 @@ const sendForgotPasswordEmail = async (email, token) => {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Reset Your Password</h2>
         <p>You requested to reset your password. Click the button below to proceed:</p>
-                 <a href="https://localhost:3000/set-new-password?token=${token}"  
+                 <a href="${process.env.FRONTEND_URL}/set-new-password?token=${token}"
            style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">
           Reset Password
         </a>
@@ -48,7 +48,7 @@ const sendForgotPasswordEmail = async (email, token) => {
         <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
       </div>
     `,
-    text: `Click this link to reset your password: https://localhost:3000/set-new-password?token=${token}. It expires in 1 hour.`,
+    text: `Click this link to reset your password: ${process.env.FRONTEND_URL}/set-new-password?token=${token}. It expires in 1 hour.`,
   };
   await transporter.sendMail(mailOptions);
 };

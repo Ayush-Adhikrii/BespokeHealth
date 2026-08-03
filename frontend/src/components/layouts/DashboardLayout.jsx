@@ -5,19 +5,23 @@ import { useAuth } from "../../context/AuthContext";
 import { getMyProfile } from "../../services/KycService";
 import NotificationService from "../../services/NotificationService";
 import NotificationDrawer from "../notifications/NotificationDrawer";
+import DoctorAvatar from "../common/DoctorAvatar";
+import CartDrawer from "../medicine/CartDrawer";
+import { useCart } from "../../context/CartContext";
 
 const DashboardLayout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { cartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileDropdownRef = useRef(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profile, setProfile] = useState({});
 
-  
   useEffect(() => {
     if (user && user.role !== "Admin") {
       const fetchUnreadCount = async () => {
@@ -32,7 +36,6 @@ const DashboardLayout = ({ children }) => {
       const fetchProfile = async () => {
         try {
           const profile = await getMyProfile();
-          console.log("User profile:", profile);
           setProfile(profile);
         } catch (error) {
           console.error("Failed to fetch user profile:", error);
@@ -45,7 +48,6 @@ const DashboardLayout = ({ children }) => {
     }
   }, [user]);
 
-  
   useEffect(() => {
     if (!isNotificationsOpen && user && user.role !== "Admin") {
       NotificationService.getUnreadCount().then((count) =>
@@ -98,17 +100,11 @@ const DashboardLayout = ({ children }) => {
     }
   }, [location.pathname]);
 
-  const getInitial = () => {
-    if (!profile || !profile.name) return "U";
-    return profile.name.charAt(0).toUpperCase();
-  };
-
   const getFirstName = () => {
     if (!profile || !profile.name) return "User";
     return profile.name.split(" ")[0];
   };
 
-  
   const NotificationBadge = ({ onClick }) => {
     return (
       <button
@@ -141,7 +137,7 @@ const DashboardLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      
+
       {isSidebarOpen && (
         <div
           className="md:hidden fixed inset-0 bg-gray-600 bg-opacity-50 z-10"
@@ -152,9 +148,9 @@ const DashboardLayout = ({ children }) => {
       <nav className="bg-white shadow-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            
+
             <div className="flex items-center">
-              
+
               <button
                 className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -178,7 +174,6 @@ const DashboardLayout = ({ children }) => {
                 </svg>
               </button>
 
-              
               <div className="flex-shrink-0 flex items-center ml-2 md:ml-0">
                 <Link to="/dashboard" className="flex items-center">
                   <svg
@@ -202,9 +197,8 @@ const DashboardLayout = ({ children }) => {
               </div>
             </div>
 
-            
             <div className="flex items-center">
-              
+
               {user?.role !== "Admin" && (
                 <div className="relative">
                   <NotificationBadge
@@ -213,7 +207,21 @@ const DashboardLayout = ({ children }) => {
                 </div>
               )}
 
-              
+              {user?.role === "Patient" && (
+                <button
+                  className="p-2 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative"
+                  onClick={() => setIsCartOpen(true)}
+                >
+                  <span className="sr-only">Open cart</span>
+                  <ShoppingCart className="h-6 w-6" />
+                  {cartCount > 0 && (
+                    <span className="absolute top-0 right-0 h-5 w-5 rounded-full bg-red-500 flex items-center justify-center text-white text-xs">
+                      {cartCount > 9 ? "9+" : cartCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
               <div className="ml-3 relative" ref={profileDropdownRef}>
                 <div>
                   <button
@@ -233,14 +241,19 @@ const DashboardLayout = ({ children }) => {
                           {user?.role || "User"}
                         </p>
                       </div>
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm">
-                        {getInitial()}
+                      <div className="shadow-sm rounded-full">
+                        <DoctorAvatar
+                          name={profile?.name}
+                          imageUrl={profile?.doctorProfile?.image_url}
+                          sizeClass="h-9 w-9"
+                          textClass="text-sm"
+                          fallbackClass="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                        />
                       </div>
                     </div>
                   </button>
                 </div>
 
-                
                 {isProfileMenuOpen && (
                   <div
                     className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
@@ -283,37 +296,18 @@ const DashboardLayout = ({ children }) => {
         </div>
       </nav>
 
-      
       <div className="flex">
         {" "}
-        
-        
+
         <aside
           className={`bg-white w-64 shadow-md fixed top-16 bottom-0 transition-all duration-300 ease-in-out z-20
             ${isSidebarOpen ? "left-0" : "-left-64 md:left-0"}`}
         >
           <div className="h-full overflow-y-auto">
             {" "}
-            
+
             <div className="p-6">
               <p className="text-lg font-semibold text-gray-600">Dashboard</p>
-
-              {user?.role !== "Admin" &&
-                profile &&
-                profile.kyc_status !== "Approved" && (
-                  <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
-                    <p className="text-sm text-yellow-700">
-                      Your KYC is {profile.kyc_status}. Some features may be
-                      restricted.
-                    </p>
-                    <Link
-                      to="/kyc-verification"
-                      className="mt-2 inline-block text-xs font-medium text-yellow-700 underline"
-                    >
-                      Complete KYC verification
-                    </Link>
-                  </div>
-                )}
 
               <nav className="mt-6 space-y-1">
                 <SidebarLink
@@ -331,11 +325,17 @@ const DashboardLayout = ({ children }) => {
                       icon="calendar"
                       currentPath={location.pathname}
                     />
-                  
+
                     <SidebarLink
                       to="/dashboard/prescriptions"
                       label="Prescriptions"
                       icon="clipboard"
+                      currentPath={location.pathname}
+                    />
+                    <SidebarLink
+                      to="/dashboard/health-records"
+                      label="Health Records"
+                      icon="document"
                       currentPath={location.pathname}
                     />
                     <SidebarLink
@@ -344,7 +344,13 @@ const DashboardLayout = ({ children }) => {
                       icon="shop"
                       currentPath={location.pathname}
                     />
-                    
+                    <SidebarLink
+                      to="/dashboard/medicine-orders"
+                      label="My Orders"
+                      icon="credit-card"
+                      currentPath={location.pathname}
+                    />
+
                   </>
                 )}
 
@@ -362,31 +368,29 @@ const DashboardLayout = ({ children }) => {
                       icon="clock"
                       currentPath={location.pathname}
                     />
-
                     <SidebarLink
                       to="/dashboard/consultations"
                       label="Consultations"
                       icon="consultation"
                       currentPath={location.pathname}
                     />
-                      <SidebarLink
-                      to="/dashboard/chat"
-                      label="Messages"
-                      icon="chat"
+                    <SidebarLink
+                      to="/dashboard/reviews"
+                      label="My Reviews"
+                      icon="star"
                       currentPath={location.pathname}
-                      notificationCount={totalUnread}
+                    />
+                    <SidebarLink
+                      to="/dashboard/kyc-submission"
+                      label="KYC Verification"
+                      icon="document"
+                      currentPath={location.pathname}
                     />
                   </>
                 )}
 
                 {user?.role === "Admin" && (
                   <>
-                    <SidebarLink
-                      to="/dashboard/kyc-requests"
-                      label="KYC Requests"
-                      icon="shield-check"
-                      currentPath={location.pathname}
-                    />
                     <SidebarLink
                       to="/dashboard/customers"
                       label="Customers"
@@ -397,6 +401,12 @@ const DashboardLayout = ({ children }) => {
                       to="/dashboard/doctors"
                       label="Doctors"
                       icon="user-md"
+                      currentPath={location.pathname}
+                    />
+                    <SidebarLink
+                      to="/dashboard/admin/kyc-requests"
+                      label="KYC Requests"
+                      icon="document"
                       currentPath={location.pathname}
                     />
                     <SidebarLink
@@ -418,6 +428,18 @@ const DashboardLayout = ({ children }) => {
                       currentPath={location.pathname}
                     />
                     <SidebarLink
+                      to="/dashboard/admin/medicine-orders"
+                      label="Medicine Orders"
+                      icon="clipboard"
+                      currentPath={location.pathname}
+                    />
+                    <SidebarLink
+                      to="/dashboard/admin/reviews"
+                      label="All Reviews"
+                      icon="star"
+                      currentPath={location.pathname}
+                    />
+                    <SidebarLink
                       to="/admin/activity-log"
                       label="Activity Log"
                       icon="clipboard"
@@ -426,7 +448,7 @@ const DashboardLayout = ({ children }) => {
                   </>
                 )}
 
-                {/* Profile Link for all users */}
+                {}
                 <div className="pt-4 mt-4 border-t border-gray-200">
                   <SidebarLink
                     to="/dashboard/profile"
@@ -436,7 +458,6 @@ const DashboardLayout = ({ children }) => {
                   />
                 </div>
 
-            
                 <div className="pt-4 mt-4 border-t border-gray-200">
                   <button
                     onClick={handleLogout}
@@ -466,72 +487,17 @@ const DashboardLayout = ({ children }) => {
           </div>
         </aside>
         <div className="flex-1 md:ml-64 overflow-auto min-h-[calc(100vh-4rem)]">
-          {user?.role !== "Admin" &&
-            profile &&
-            profile.kyc_status !== "Approved" &&
-            profile.role !== "admin" && (
-              <div className="p-4 sm:p-6 md:p-8">
-                <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <svg
-                        className="h-5 w-5 text-yellow-400"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">
-                        KYC Status: {profile.kyc_status}
-                      </h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <p>
-                          Some features are restricted until your KYC is
-                          approved.
-                        </p>
-                      </div>
-                      <div className="mt-3">
-                        <Link
-                          to="/kyc-verification"
-                          className="text-sm font-medium text-yellow-800 hover:text-yellow-900 inline-flex items-center"
-                        >
-                          Complete verification
-                          <svg
-                            className="ml-1 h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          
           <div className="p-4 sm:p-6 md:p-8">{children}</div>
         </div>
       </div>
 
-      
       <NotificationDrawer
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
       />
+      {user?.role === "Patient" && (
+        <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      )}
     </div>
   );
 };
@@ -787,6 +753,22 @@ const SidebarLink = ({ to, label, icon, currentPath, notificationCount }) => {
           strokeLinejoin="round"
           strokeWidth={2}
           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    ),
+    star: (
+      <svg
+        className="w-5 h-5"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
         />
       </svg>
     ),

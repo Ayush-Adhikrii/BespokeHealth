@@ -4,9 +4,7 @@ const http = require("http");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
-const csurf = require("csurf");
 const { PrismaClient } = require("@prisma/client");
-const setupWebSockets = require("./utils/setupWebSockets");
 const rateLimit = require("express-rate-limit");
 const fs = require("fs");
 const https = require("https");
@@ -41,8 +39,6 @@ if (useHttps) {
   console.warn("Running without HTTPS!");
 }
 
-const io = setupWebSockets(server);
-
 prisma
   .$connect()
   .then(() => console.log("PostgreSQL connected successfully"))
@@ -50,30 +46,18 @@ prisma
 
 app.use(helmet());
 app.use(cors({
-  origin: ["https://localhost:5173", "https://localhost:5173", "https://localhost:3000"],
-  credentials: true
+origin: ["https://localhost:5173", "http://localhost:5173"],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-temp-device-id'],
+  exposedHeaders: ['Content-Disposition']
 }));
 app.use(express.json());
 app.use(express.static("../frontend/dist"));
 app.use(cookieParser());
 
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Backend server is running" });
-});
-
-app.get("/api/csrf-token", (req, res) => {
-  const crypto = require('crypto');
-  const token = crypto.randomBytes(32).toString('hex');
-  res.cookie('XSRF-TOKEN', token, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
-  res.json({ csrfToken: token });
-});
-
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 1 * 60 * 1000,
   max: 1000,
   message: {
     error: "Too many requests, please try again later."
@@ -82,8 +66,8 @@ const limiter = rateLimit({
 app.use(limiter);
 
 const authRoutes = require("./routes/authRoutes");
-const kycRoutes = require("./routes/kycRoutes");
 const fileRoutes = require("./routes/fileRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const availabilityRoutes = require("./routes/availabilityRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
@@ -92,49 +76,30 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const statRoutes = require("./routes/statRoutes");
 const diseaseRoutes = require("./routes/diseaseRoutes");
 const medicineRoutes = require("./routes/medicineRoutes");
+const medicineProtectedRoutes = require("./routes/medicineProtectedRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const kycRoutes = require("./routes/kycRoutes");
+const medicineOrderRoutes = require("./routes/medicineOrderRoutes");
 
 app.use("/api/auth", authRoutes);
-app.use("/api/kyc", kycRoutes);
+app.use("/api/reviews", reviewRoutes);
+
+app.options("/api/uploads/:type/:filename", cors());
 app.use("/api/uploads", fileRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/stats", statRoutes);
 app.use("/api/disease", diseaseRoutes);
-
-const csrfProtectedRoutes = express.Router();
-csrfProtectedRoutes.use(csurf({
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  },
-  ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
-  value: (req) => {
-    return req.headers['x-csrf-token'];
-  }
-}));
-
-csrfProtectedRoutes.use("/api/appointments", appointmentRoutes);
-csrfProtectedRoutes.use("/api/payments", paymentRoutes);
-csrfProtectedRoutes.use("/api/notifications", notificationRoutes);
-csrfProtectedRoutes.use("/api/medicines", medicineRoutes);
-csrfProtectedRoutes.use("/api/analytics", analyticsRoutes);
-csrfProtectedRoutes.use("/api/admin", adminRoutes);
-
-app.use(csrfProtectedRoutes);
-
-app.use((err, req, res, next) => {
-  if (err.code === 'EBADCSRFTOKEN') {
-    console.log('CSRF token validation failed:', req.url);
-    return res.status(403).json({
-      error: 'CSRF token validation failed',
-      message: 'Invalid or missing CSRF token'
-    });
-  }
-  next(err);
-});
+app.use("/api/medicines", medicineRoutes);
+app.use("/api/appointments", appointmentRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/medicines", medicineProtectedRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/kyc", kycRoutes);
+app.use("/api/medicine-orders", medicineOrderRoutes);
 
 const { handleFileUploadErrors } = require("./middleware/errorHandler");
 app.use(handleFileUploadErrors);

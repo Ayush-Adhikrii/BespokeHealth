@@ -1,5 +1,4 @@
 const { PrismaClient } = require("@prisma/client");
-const { sendNotificationEvent } = require("./socketService");
 const prisma = new PrismaClient();
 
 
@@ -14,14 +13,6 @@ const createNotification = async (userId, message, type) => {
       }
     });
 
-
-    sendNotificationEvent(userId, {
-      id: notification.id,
-      message: notification.message,
-      type: notification.type,
-      created_at: notification.created_at
-    });
-    
     return notification;
   } catch (error) {
     console.error("Error creating notification:", error);

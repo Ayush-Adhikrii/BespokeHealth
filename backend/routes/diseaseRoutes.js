@@ -4,8 +4,8 @@ const diseaseController = require('../controller/diseaseController');
 const { authenticateToken } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const postLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit each IP to 20 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: {
     error: 'Too many requests. Please try again after 15 minutes.'
   },

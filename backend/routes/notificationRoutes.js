@@ -25,6 +25,23 @@ router.get("/", async (req, res) => {
 });
 
 
+router.put("/read-all", async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await prisma.notification.updateMany({
+      where: { user_id: userId, is_read: false },
+      data: { is_read: true },
+    });
+
+    res.json({ message: "All notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+    res.status(500).json({ error: "Failed to update notifications" });
+  }
+});
+
+
 router.put("/:id/read", async (req, res) => {
   try {
     const userId = req.user.id;

@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const availabilityController = require("../controller/availabilityController");
-const { authenticateToken, authorizeRoles } = require("../middleware/auth");
+const { authenticateToken, authorizeRoles, requireApprovedDoctor } = require("../middleware/auth");
 const doctorController = require("../controller/doctorController");
 const rateLimit = require('express-rate-limit');
 const postLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit each IP to 20 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: {
     error: 'Too many requests. Please try again after 15 minutes.'
   },
@@ -14,12 +14,12 @@ const postLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-
 router.post(
   "/set",
   postLimiter,
   authenticateToken,
   authorizeRoles(["Doctor"]),
+  requireApprovedDoctor,
   availabilityController.setDoctorAvailability
 );
 
@@ -28,9 +28,9 @@ router.post(
   postLimiter,
   authenticateToken,
   authorizeRoles(["Doctor"]),
+  requireApprovedDoctor,
   availabilityController.setConsultationFees
 );
-
 
 router.get(
   "/me",
@@ -51,7 +51,6 @@ router.get(
   authorizeRoles(["Doctor"]),
   doctorController.getGeneralStats
 );
-
 
 router.get(
   "/doctors/:doctorId/availability",

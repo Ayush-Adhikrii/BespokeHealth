@@ -1,21 +1,40 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import Footer from "../components/home/Footer";
 import Navbar from "../components/home/Navbar";
 import { useAuth } from "../context/AuthContext";
 import { getDoctorById } from "../services/DoctorService";
 import { setAppointmentData } from "../utils/cookie";
+import DoctorAvatar from "../components/common/DoctorAvatar";
+import DashboardLayout from "../components/layouts/DashboardLayout";
+import StarRating from "../components/common/StarRating";
+import ReviewService from "../services/ReviewService";
 
 const DoctorDetailPage = () => {
   const { doctorId } = useParams();
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ avg_rating: 0, rating_count: 0 });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const isAuthenticated = !!user;
+
+  const Layout = ({ children }) =>
+    isAuthenticated ? (
+      <DashboardLayout>{children}</DashboardLayout>
+    ) : (
+      <>
+        <Navbar />
+        {children}
+        <Footer />
+      </>
+    );
 
   useEffect(() => {
     const fetchDoctorDetails = async () => {
@@ -35,6 +54,31 @@ const DoctorDetailPage = () => {
     fetchDoctorDetails();
   }, [doctorId]);
 
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        const data = await ReviewService.getDoctorReviews(doctorId);
+        setReviews(data.reviews);
+        setReviewStats({ avg_rating: data.avg_rating, rating_count: data.rating_count });
+      } catch (err) {
+        console.error("Failed to load reviews:", err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [doctorId]);
+
+  const formatDate = (dateString) => {
+    try {
+      return format(parseISO(dateString), "MMM d, yyyy");
+    } catch {
+      return dateString || "";
+    }
+  };
+
   const handleBookAppointment = () => {
     if (isAuthenticated) {
       navigate(`/appointment/book/${doctorId}`);
@@ -52,9 +96,8 @@ const DoctorDetailPage = () => {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex justify-center items-center bg-gray-50 pt-20">
+      <Layout>
+        <div className="min-h-screen flex justify-center items-center bg-gray-50">
           <div className="text-center">
             <svg
               className="animate-spin h-12 w-12 text-blue-600 mx-auto"
@@ -79,45 +122,39 @@ const DoctorDetailPage = () => {
             <p className="mt-3 text-gray-600">Loading doctor's profile...</p>
           </div>
         </div>
-        <Footer />
-      </>
+      </Layout>
     );
   }
 
   if (error) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 pt-20 p-4">
+      <Layout>
+        <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 p-4">
           <div className="text-red-600 text-xl mb-4">{error}</div>
           <Link to="/" className="text-blue-600 hover:underline">
             Return to Home
           </Link>
         </div>
-        <Footer />
-      </>
+      </Layout>
     );
   }
 
   if (!doctor) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 pt-20 p-4">
+      <Layout>
+        <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 p-4">
           <div className="text-gray-600 text-xl mb-4">Doctor not found</div>
           <Link to="/" className="text-blue-600 hover:underline">
             Return to Home
           </Link>
         </div>
-        <Footer />
-      </>
+      </Layout>
     );
   }
 
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-gray-50 pt-20 pb-16">
+    <Layout>
+      <main className={`bg-gray-50 pb-16 ${isAuthenticated ? "" : "min-h-screen pt-20"}`}>
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <nav className="flex mb-6" aria-label="Breadcrumb">
@@ -176,10 +213,21 @@ const DoctorDetailPage = () => {
             <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
               <div className="relative h-48 bg-gradient-to-r from-blue-500 to-indigo-600">
                 <div className="absolute -bottom-16 left-8 md:left-10">
-                  <div className="h-32 w-32 rounded-full border-4 border-white bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-5xl shadow-lg">
-                    {doctor?.user.name
-                      ? doctor.user.name.charAt(0).toUpperCase()
-                      : "?"}
+                  <div className="relative border-4 border-white rounded-full shadow-lg">
+                    <DoctorAvatar
+                      name={doctor?.user.name}
+                      imageUrl={doctor.image_url}
+                      sizeClass="h-32 w-32"
+                      textClass="text-5xl font-bold"
+                    />
+                    {reviewStats.rating_count > 0 && (
+                      <div className="absolute -top-2 -right-2 flex items-center gap-1 bg-yellow-400 text-white text-sm font-semibold px-2 py-1 rounded-full shadow-sm">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        {reviewStats.avg_rating.toFixed(1)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -367,11 +415,83 @@ const DoctorDetailPage = () => {
                         <p className="text-gray-600">{doctor.speciality}</p>
                       </div>
                     </div>
+                    {doctor.cv_url && (
+                      <div className="flex">
+                        <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                          <svg
+                            className="w-6 h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            ></path>
+                          </svg>
+                        </div>
+                        <div className="ml-4">
+                          <h3 className="text-lg font-medium text-gray-900">
+                            CV / Resume
+                          </h3>
+                          <a
+                            href={doctor.cv_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View CV
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-md p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold text-gray-800">Patient Reviews</h2>
+                    {reviewStats.rating_count > 0 && (
+                      <div className="flex items-center gap-2">
+                        <StarRating value={Math.round(reviewStats.avg_rating)} readOnly size="sm" />
+                        <span className="text-sm text-gray-600">
+                          {reviewStats.avg_rating.toFixed(1)} ({reviewStats.rating_count} review{reviewStats.rating_count === 1 ? "" : "s"})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {reviewsLoading ? (
+                    <div className="flex justify-center py-6">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    </div>
+                  ) : reviews.length === 0 ? (
+                    <p className="text-gray-500 text-center py-6">
+                      No reviews yet. Be the first to review Dr. {doctor.user.name} after your appointment.
+                    </p>
+                  ) : (
+                    <div className="space-y-5">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="border-b border-gray-100 last:border-0 pb-5 last:pb-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-900">{review.patient_name}</span>
+                            <span className="text-xs text-gray-400">{formatDate(review.created_at)}</span>
+                          </div>
+                          <StarRating value={review.score} readOnly size="sm" />
+                          {review.feedback && (
+                            <p className="mt-2 text-gray-600 text-sm">{review.feedback}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              
+
               <div className="bg-white rounded-xl shadow-md p-8 mb-8">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">
                   Consultation Fees
@@ -420,8 +540,7 @@ const DoctorDetailPage = () => {
           </div>
         </div>
       </main>
-      <Footer />
-    </>
+    </Layout>
   );
 };
 

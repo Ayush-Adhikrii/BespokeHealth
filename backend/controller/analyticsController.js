@@ -1,7 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-
 const getDateRange = (period, customStart, customEnd) => {
   const end = new Date();
   let start = new Date();
@@ -30,18 +29,15 @@ const getDateRange = (period, customStart, customEnd) => {
       start.setFullYear(start.getFullYear() - 1);
       break;
     default:
-      start.setMonth(start.getMonth() - 1); 
+      start.setMonth(start.getMonth() - 1);
   }
 
   return { start, end };
 };
 
-/**
- * Get overall analytics dashboard overview
- */
 const getAnalyticsOverview = async (req, res) => {
   try {
-    
+
     const [
       totalUsers,
       totalDoctors,
@@ -58,7 +54,6 @@ const getAnalyticsOverview = async (req, res) => {
       prisma.payment.aggregate({ _sum: { amount: true } }),
     ]);
 
-    
     const recentUsers = await prisma.users.findMany({
       take: 5,
       orderBy: { created_at: "desc" },
@@ -71,7 +66,6 @@ const getAnalyticsOverview = async (req, res) => {
       },
     });
 
-    
     const recentAppointments = await prisma.appointment.findMany({
       take: 5,
       orderBy: { created_at: "desc" },
@@ -115,22 +109,17 @@ const getAnalyticsOverview = async (req, res) => {
   }
 };
 
-/**
- * Get user growth analytics
- */
 const getUserAnalytics = async (req, res) => {
   try {
     const { period = "month", groupBy = "day", start, end } = req.query;
     const dateRange = getDateRange(period, start, end);
 
-    
     const [totalUsers, totalDoctors, totalPatients] = await Promise.all([
       prisma.users.count(),
       prisma.doctor.count(),
       prisma.patient.count(),
     ]);
 
-    
     const newUsers = await prisma.users.findMany({
       where: {
         created_at: {
@@ -145,17 +134,16 @@ const getUserAnalytics = async (req, res) => {
       },
     });
 
-    
     const registrationsByTime = {};
 
     newUsers.forEach((user) => {
       let timeKey;
 
       if (groupBy === "month") {
-        
+
         timeKey = user.created_at.toISOString().substring(0, 7);
       } else {
-        
+
         timeKey = user.created_at.toISOString().substring(0, 10);
       }
 
@@ -166,7 +154,6 @@ const getUserAnalytics = async (req, res) => {
       registrationsByTime[timeKey]++;
     });
 
-    
     const userRegistrations = Object.entries(registrationsByTime).map(
       ([date, count]) => ({
         date,
@@ -174,10 +161,8 @@ const getUserAnalytics = async (req, res) => {
       })
     );
 
-    
     userRegistrations.sort((a, b) => a.date.localeCompare(b.date));
 
-    
     const roleDistribution = {};
     newUsers.forEach((user) => {
       const role = user.role || "Unknown";
@@ -187,7 +172,6 @@ const getUserAnalytics = async (req, res) => {
       roleDistribution[role]++;
     });
 
-    
     const usersByRole = Object.entries(roleDistribution).map(
       ([role, count]) => ({
         role,
@@ -196,7 +180,6 @@ const getUserAnalytics = async (req, res) => {
       })
     );
 
-    
     let kycMetrics = {
       totalSubmissions: 0,
       approvalRate: 0,
@@ -204,14 +187,13 @@ const getUserAnalytics = async (req, res) => {
       statusDistribution: [],
     };
 
-    
     if (prisma.KYC) {
       const kycRecords = await prisma.KYC.findMany({
         select: {
           id: true,
           status: true,
           created_at: true,
-          reviewed_at: true, 
+          reviewed_at: true,
         },
       });
 
@@ -220,14 +202,13 @@ const getUserAnalytics = async (req, res) => {
         (kyc) => kyc.status === "approved"
       );
 
-      
       let totalProcessingHours = 0;
       approvedKycs.forEach((kyc) => {
         if (kyc.reviewed_at) {
-          
+
           const processingTime =
             kyc.reviewed_at.getTime() - kyc.created_at.getTime();
-          totalProcessingHours += processingTime / (1000 * 60 * 60); 
+          totalProcessingHours += processingTime / (1000 * 60 * 60);
         }
       });
 
@@ -236,7 +217,6 @@ const getUserAnalytics = async (req, res) => {
           ? totalProcessingHours / approvedKycs.length
           : 0;
 
-      
       const kycByStatus = {};
       kycRecords.forEach((kyc) => {
         const status = kyc.status || "pending";
@@ -246,7 +226,6 @@ const getUserAnalytics = async (req, res) => {
         kycByStatus[status]++;
       });
 
-      
       const kycStatusDistribution = Object.entries(kycByStatus).map(
         ([status, count]) => ({
           status,
@@ -296,15 +275,11 @@ const getUserAnalytics = async (req, res) => {
   }
 };
 
-/**
- * Get doctor-specific analytics
- */
 const getDoctorAnalytics = async (req, res) => {
   try {
     const { period = "month", limit = 10 } = req.query;
     const dateRange = getDateRange(period);
 
-    
     const doctorsBySpeciality = await prisma.doctor.groupBy({
       by: ["speciality"],
       _count: { id: true },
@@ -312,7 +287,6 @@ const getDoctorAnalytics = async (req, res) => {
 
     const totalDoctors = await prisma.doctor.count();
 
-    
     const activeDoctors = await prisma.doctor.findMany({
       take: parseInt(limit),
       include: {
@@ -334,7 +308,6 @@ const getDoctorAnalytics = async (req, res) => {
       },
     });
 
-    
     const doctors = await prisma.doctor.findMany({
       select: {
         id: true,
@@ -347,10 +320,8 @@ const getDoctorAnalytics = async (req, res) => {
       },
     });
 
-    
-    
     const formattedRatings = doctors.map((doctor) => {
-      
+
       const randomRating = (Math.random() * 1.5 + 3.5).toFixed(1);
       const randomReviewCount = Math.floor(Math.random() * 20) + 1;
 
@@ -363,11 +334,8 @@ const getDoctorAnalytics = async (req, res) => {
       };
     });
 
-    
     formattedRatings.sort((a, b) => b.averageRating - a.averageRating);
 
-    
-    
     let doctorKycStats = [];
     let totalDoctorKycs = 0;
 
@@ -388,7 +356,7 @@ const getDoctorAnalytics = async (req, res) => {
       );
     } catch (err) {
       console.error("KYC stats error:", err);
-      
+
       doctorKycStats = [
         { status: "pending", _count: { id: 0 } },
         { status: "approved", _count: { id: 0 } },
@@ -462,15 +430,11 @@ const getDoctorAnalytics = async (req, res) => {
   }
 };
 
-/**
- * Get patient-specific analytics
- */
 const getPatientAnalytics = async (req, res) => {
   try {
-    
+
     const totalPatients = await prisma.patient.count();
 
-    
     const patients = await prisma.patient.findMany({
       select: {
         id: true,
@@ -491,7 +455,6 @@ const getPatientAnalytics = async (req, res) => {
       },
     });
 
-    
     const genderGroups = {};
     patients.forEach((patient) => {
       const gender = patient.gender || "Unspecified";
@@ -509,7 +472,6 @@ const getPatientAnalytics = async (req, res) => {
       })
     );
 
-    
     const ageGroups = {
       "0-18": 0,
       "19-30": 0,
@@ -531,7 +493,6 @@ const getPatientAnalytics = async (req, res) => {
       }
     });
 
-    
     const patientActivity = patients
       .map((patient) => ({
         id: patient.id,
@@ -540,7 +501,7 @@ const getPatientAnalytics = async (req, res) => {
         appointmentCount: patient.appointments.length,
       }))
       .sort((a, b) => b.appointmentCount - a.appointmentCount)
-      .slice(0, 10); 
+      .slice(0, 10);
 
     res.status(200).json({
       totalPatients,
@@ -560,19 +521,13 @@ const getPatientAnalytics = async (req, res) => {
   }
 };
 
-/**
- * Get appointment analytics
- */
 const getAppointmentAnalytics = async (req, res) => {
   try {
     const { period = "month", groupBy = "day", start, end } = req.query;
     const dateRange = getDateRange(period, start, end);
-    
-    
+
     const totalAppointments = await prisma.appointment.count();
-    
-    
-    
+
     const appointments = await prisma.appointment.findMany({
       select: {
         id: true,
@@ -589,8 +544,7 @@ const getAppointmentAnalytics = async (req, res) => {
         }
       }
     });
-    
-    
+
     const statusCounts = {};
     appointments.forEach((apt) => {
       const status = apt.status || "unknown";
@@ -608,7 +562,6 @@ const getAppointmentAnalytics = async (req, res) => {
       })
     );
 
-    
     const appointmentsByTime = {};
     appointments.forEach((apt) => {
       if (
@@ -618,10 +571,10 @@ const getAppointmentAnalytics = async (req, res) => {
         let timeKey;
 
         if (groupBy === "month") {
-          
+
           timeKey = apt.created_at.toISOString().substring(0, 7);
         } else {
-          
+
           timeKey = apt.created_at.toISOString().substring(0, 10);
         }
 
@@ -633,48 +586,44 @@ const getAppointmentAnalytics = async (req, res) => {
       }
     });
 
-    
     const appointmentTrends = Object.entries(appointmentsByTime)
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    
     const hourCounts = {};
     const dayCounts = {};
 
     appointments.forEach((apt) => {
       if (apt.time_slot && apt.time_slot.start_time) {
-        
+
         let hour;
-        
-        
+
         if (typeof apt.time_slot.start_time === 'string') {
-          
+
           hour = parseInt(apt.time_slot.start_time.split(":")[0]);
         } else if (apt.time_slot.start_time instanceof Date) {
-          
+
           hour = apt.time_slot.start_time.getHours();
         } else {
-          
+
           const timeStr = String(apt.time_slot.start_time);
           try {
             hour = parseInt(timeStr.split(":")[0]);
           } catch (e) {
             console.log("Could not parse hour from:", timeStr);
-            hour = 0; 
+            hour = 0;
           }
         }
-        
+
         if (!hourCounts[hour]) {
           hourCounts[hour] = 0;
         }
         hourCounts[hour]++;
-        
-        
+
         if (apt.time_slot.date) {
           const date = new Date(apt.time_slot.date);
-          const dayOfWeek = date.getDay(); 
-          
+          const dayOfWeek = date.getDay();
+
           if (!dayCounts[dayOfWeek]) {
             dayCounts[dayOfWeek] = 0;
           }
@@ -683,12 +632,10 @@ const getAppointmentAnalytics = async (req, res) => {
       }
     });
 
-    
     const cancelledAppointments = appointments.filter(
       (apt) => apt.status === "cancelled"
     );
 
-    
     const cancellationReasons = {};
     cancelledAppointments.forEach((apt) => {
       const reason = apt.cancellation_reason || "Not specified";
@@ -731,7 +678,7 @@ const getAppointmentAnalytics = async (req, res) => {
           ([reason, count]) => ({
             reason,
             count,
-            percentage: cancelledAppointments.length > 0 ? 
+            percentage: cancelledAppointments.length > 0 ?
               ((count / cancelledAppointments.length) * 100).toFixed(2) : "0.00",
           })
         ),
@@ -743,20 +690,15 @@ const getAppointmentAnalytics = async (req, res) => {
   }
 };
 
-/**
- * Get revenue analytics
- */
 const getRevenueAnalytics = async (req, res) => {
   try {
     const { period = "month", groupBy = "day", start, end } = req.query;
     const dateRange = getDateRange(period, start, end);
 
-    
     const totalRevenue = await prisma.payment.aggregate({
       _sum: { amount: true },
     });
 
-    
     const payments = await prisma.payment.findMany({
       where: {
         created_at: {
@@ -767,7 +709,7 @@ const getRevenueAnalytics = async (req, res) => {
       select: {
         id: true,
         amount: true,
-        payment_method: true,  
+        payment_method: true,
         created_at: true,
         appointment: {
           select: {
@@ -788,65 +730,61 @@ const getRevenueAnalytics = async (req, res) => {
       }
     });
 
-    
     const revenueByTime = {};
-    
+
     payments.forEach(payment => {
       let timeKey;
-      
+
       if (groupBy === 'month') {
-        
+
         timeKey = payment.created_at.toISOString().substring(0, 7);
       } else {
-        
+
         timeKey = payment.created_at.toISOString().substring(0, 10);
       }
-      
+
       if (!revenueByTime[timeKey]) {
         revenueByTime[timeKey] = 0;
       }
-      
+
       revenueByTime[timeKey] += payment.amount;
     });
-    
-    
+
     const revenueTrends = Object.entries(revenueByTime)
       .map(([date, amount]) => ({ date, amount }))
       .sort((a, b) => a.date.localeCompare(b.date));
-    
-    
+
     const specialityRevenue = {};
-    
+
     payments.forEach(payment => {
       if (payment.appointment?.doctor?.speciality) {
         const speciality = payment.appointment.doctor.speciality;
-        
+
         if (!specialityRevenue[speciality]) {
           specialityRevenue[speciality] = 0;
         }
-        
+
         specialityRevenue[speciality] += payment.amount;
       }
     });
-    
+
     const revenueBySpeciality = Object.entries(specialityRevenue)
       .map(([speciality, amount]) => ({
         speciality,
         amount,
-        percentage: totalRevenue._sum.amount 
-          ? ((amount / totalRevenue._sum.amount) * 100).toFixed(2) 
+        percentage: totalRevenue._sum.amount
+          ? ((amount / totalRevenue._sum.amount) * 100).toFixed(2)
           : 0
       }))
       .sort((a, b) => b.amount - a.amount);
-    
-    
+
     const doctorRevenue = {};
-    
+
     payments.forEach(payment => {
       if (payment.appointment?.doctor) {
         const doctor = payment.appointment.doctor;
         const doctorId = doctor.id;
-        
+
         if (!doctorRevenue[doctorId]) {
           doctorRevenue[doctorId] = {
             id: doctorId,
@@ -856,50 +794,48 @@ const getRevenueAnalytics = async (req, res) => {
             appointmentCount: 0
           };
         }
-        
+
         doctorRevenue[doctorId].revenue += payment.amount;
         doctorRevenue[doctorId].appointmentCount += 1;
       }
     });
-    
+
     const topEarningDoctors = Object.values(doctorRevenue)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
-    
-    
+
     const methodCounts = {};
     const methodAmounts = {};
-    
+
     payments.forEach(payment => {
-      const method = payment.payment_method || 'Unknown';  
-      
+      const method = payment.payment_method || 'Unknown';
+
       if (!methodCounts[method]) {
         methodCounts[method] = 0;
         methodAmounts[method] = 0;
       }
-      
+
       methodCounts[method]++;
       methodAmounts[method] += payment.amount;
     });
-    
+
     const paymentMethods = Object.entries(methodCounts).map(([method, count]) => ({
       method,
       count,
       amount: methodAmounts[method],
-      percentage: totalRevenue._sum.amount 
-        ? ((methodAmounts[method] / totalRevenue._sum.amount) * 100).toFixed(2) 
+      percentage: totalRevenue._sum.amount
+        ? ((methodAmounts[method] / totalRevenue._sum.amount) * 100).toFixed(2)
         : 0
     }));
-    
-    
+
     const today = new Date();
     const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-    
-    const lastMonthPayments = payments.filter(p => 
+
+    const lastMonthPayments = payments.filter(p =>
       p.created_at >= lastMonth && p.created_at < today
     );
-    
+
     const previousMonthPayments = await prisma.payment.findMany({
       where: {
         created_at: {
@@ -911,15 +847,14 @@ const getRevenueAnalytics = async (req, res) => {
         amount: true
       }
     });
-    
+
     const lastMonthRevenue = lastMonthPayments.reduce((sum, p) => sum + p.amount, 0);
     const previousMonthRevenue = previousMonthPayments.reduce((sum, p) => sum + p.amount, 0);
-    
-    
+
     const monthlyGrowthRate = previousMonthRevenue > 0
       ? (lastMonthRevenue - previousMonthRevenue) / previousMonthRevenue
       : 0;
-    
+
     const forecastNextMonth = lastMonthRevenue * (1 + monthlyGrowthRate);
 
     res.status(200).json({

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import AdminService from "../../services/AdminService";
+import DoctorAvatar from "../../components/common/DoctorAvatar";
 
 const DoctorsManagementPage = () => {
   const [doctors, setDoctors] = useState([]);
@@ -23,6 +24,7 @@ const DoctorsManagementPage = () => {
     sortOrder: "desc",
   });
   const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [selectedMetrics, setSelectedMetrics] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -122,6 +124,7 @@ const DoctorsManagementPage = () => {
       setLoading(true);
       const data = await AdminService.getDoctorById(doctorId);
       setSelectedDoctor(data.doctor);
+      setSelectedMetrics(data.metrics);
       setDetailModalOpen(true);
     } catch (error) {
       toast.error(error.error || "Failed to load doctor details");
@@ -321,12 +324,12 @@ const DoctorsManagementPage = () => {
                     <tr key={doctor.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium">
-                            {doctor.user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </div>
+                          <DoctorAvatar
+                            name={doctor.user.name}
+                            imageUrl={doctor.image_url}
+                            sizeClass="h-10 w-10"
+                            textClass="text-sm"
+                          />
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {doctor.user.name}
@@ -488,12 +491,12 @@ const DoctorsManagementPage = () => {
 
                 <div className="border-b border-gray-200 mb-6 pb-6">
                   <div className="flex items-center mb-4">
-                    <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xl">
-                      {selectedDoctor.user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </div>
+                    <DoctorAvatar
+                      name={selectedDoctor.user.name}
+                      imageUrl={selectedDoctor.image_url}
+                      sizeClass="h-24 w-24"
+                      textClass="text-3xl font-bold"
+                    />
                     <div className="ml-4">
                       <h2 className="text-xl font-bold text-gray-900">
                         {selectedDoctor.user.name}
@@ -580,12 +583,7 @@ const DoctorsManagementPage = () => {
                         Completion Rate
                       </p>
                       <p className="text-2xl font-semibold text-green-600">
-                        {(selectedDoctor.appointments?.filter(
-                          (a) => a.status === "completed"
-                        ).length /
-                          (selectedDoctor._count.appointments || 1)) *
-                          100}
-                        %
+                        {selectedMetrics?.completionRate ?? 0}%
                       </p>
                     </div>
                     <div className="bg-amber-50 p-4 rounded-lg">

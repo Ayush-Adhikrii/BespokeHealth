@@ -25,6 +25,8 @@ const SignupPage = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const { signup, loading, error } = useAuth();
   const navigate = useNavigate();
 
@@ -62,6 +64,31 @@ const SignupPage = () => {
     return colors[passwordStrength - 1] || "bg-gray-300";
   };
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      return;
+    }
+
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+      setFormError("Profile photo must be a JPG or PNG image");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError("Profile photo must be smaller than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    setFormError("");
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
   const validateForm = () => {
     if (
       !formData.name.trim() ||
@@ -96,6 +123,11 @@ const SignupPage = () => {
         );
         return false;
       }
+
+      if (!photoFile) {
+        setFormError("A profile photo is required for doctors");
+        return false;
+      }
     }
 
     return true;
@@ -111,7 +143,22 @@ const SignupPage = () => {
 
     try {
       const { confirmPassword, ...signupData } = formData;
-      const response = await signup({ ...signupData, captchaToken });
+
+      let payload;
+      if (formData.role === "Doctor") {
+        payload = new FormData();
+        Object.entries(signupData).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            payload.append(key, value);
+          }
+        });
+        payload.append("captchaToken", captchaToken);
+        payload.append("photo", photoFile);
+      } else {
+        payload = { ...signupData, captchaToken };
+      }
+
+      const response = await signup(payload);
       setSuccessMessage(response.message);
 
       setTimeout(() => {
@@ -449,6 +496,41 @@ const SignupPage = () => {
                 <h3 className="text-lg font-medium text-gray-800">
                   Doctor Information
                 </h3>
+
+                <div>
+                  <label
+                    htmlFor="photo"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Profile Photo <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {photoPreview ? (
+                      <img
+                        src={photoPreview}
+                        alt="Profile preview"
+                        className="h-16 w-16 rounded-full object-cover border border-gray-300"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center text-gray-400">
+                        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                    )}
+                    <input
+                      id="photo"
+                      name="photo"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handlePhotoChange}
+                      className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    JPG or PNG, up to 5MB. Patients will see this on your profile.
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

@@ -495,7 +495,9 @@ const PaymentsPage = () => {
                           #{payment.id}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {payment.transactionId.substring(0, 12)}...
+                          {payment.transactionId
+                            ? `${payment.transactionId.substring(0, 12)}...`
+                            : "N/A"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

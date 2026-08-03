@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import AppointmentService from "../../services/AppointmentService";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
+import ReviewModal from "../../components/common/ReviewModal";
+import ReviewService from "../../services/ReviewService";
 
 const MyAppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
@@ -13,6 +15,9 @@ const MyAppointmentsPage = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewAppointment, setReviewAppointment] = useState(null);
+  const [reviewedIds, setReviewedIds] = useState(new Set());
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -34,6 +39,19 @@ const MyAppointmentsPage = () => {
           ? data
           : data.appointments || [];
         setAppointments(appointmentsData);
+
+        if (activeTab === "completed" && appointmentsData.length > 0) {
+          const reviewChecks = await Promise.allSettled(
+            appointmentsData.map((a) => ReviewService.getAppointmentReview(a.id))
+          );
+          const reviewed = new Set();
+          reviewChecks.forEach((res, i) => {
+            if (res.status === "fulfilled" && res.value?.reviewed) {
+              reviewed.add(appointmentsData[i].id);
+            }
+          });
+          setReviewedIds(reviewed);
+        }
 
         console.log("Fetched appointments:", appointmentsData);
       } catch (error) {
@@ -278,14 +296,35 @@ const MyAppointmentsPage = () => {
                   {activeTab === "upcoming" && (
                     <div className="mt-5 flex flex-col sm:flex-row gap-2">
                       {appointment.status === "confirmed" && (
-                        <>
-                          <button
-                            onClick={() => openCancelModal(appointment)}
-                            className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-100 bg-red-700 hover:bg-red-500"
-                          >
-                            Cancel Appointment
-                          </button>
-                        </>
+                        <button
+                          onClick={() => openCancelModal(appointment)}
+                          className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-100 bg-red-700 hover:bg-red-500"
+                        >
+                          Cancel Appointment
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "completed" && (
+                    <div className="mt-5">
+                      {reviewedIds.has(appointment.id) ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-full">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          Review submitted
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => { setReviewAppointment(appointment); setReviewModalOpen(true); }}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          Leave a Review
+                        </button>
                       )}
                     </div>
                   )}
@@ -293,6 +332,14 @@ const MyAppointmentsPage = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {reviewModalOpen && reviewAppointment && (
+          <ReviewModal
+            appointment={reviewAppointment}
+            onClose={() => { setReviewModalOpen(false); setReviewAppointment(null); }}
+            onSubmitted={(id) => setReviewedIds((prev) => new Set([...prev, id]))}
+          />
         )}
 
         {cancelModalOpen && (

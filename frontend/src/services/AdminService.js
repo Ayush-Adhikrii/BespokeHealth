@@ -1,7 +1,6 @@
 import API from "../utils/axios";
 
 class AdminService {
-  
 
   async getAllPatients(
     page = 1,
@@ -69,9 +68,6 @@ class AdminService {
     }
   }
 
-  
-
-  
   async getAllDoctors(
     page = 1,
     limit = 10,
@@ -95,7 +91,6 @@ class AdminService {
     }
   }
 
-  
   async getDoctorById(doctorId) {
     try {
       const response = await API.get(`/admin/doctors/${doctorId}`);
@@ -105,7 +100,6 @@ class AdminService {
     }
   }
 
-  
   async updateDoctorStatus(doctorId, statusData) {
     try {
       const response = await API.put(
@@ -118,7 +112,6 @@ class AdminService {
     }
   }
 
- 
   async deleteDoctor(doctorId) {
     try {
       const response = await API.delete(`/admin/doctors/${doctorId}`);
@@ -128,9 +121,6 @@ class AdminService {
     }
   }
 
-  /**
-   * Send email to doctor
-   */
   async sendEmailToDoctor(doctorId, emailData) {
     try {
       const response = await API.post(

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ConfirmModal from "../common/ConfirmModal";
 
 const daysOfWeek = [
   { value: 1, label: "Monday" },
@@ -13,6 +14,7 @@ const daysOfWeek = [
 const AvailabilityScheduler = ({ availabilities = [], onSave }) => {
   const [schedules, setSchedules] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [slotPendingRemoval, setSlotPendingRemoval] = useState(null);
 
   
   useEffect(() => {
@@ -41,7 +43,12 @@ const AvailabilityScheduler = ({ availabilities = [], onSave }) => {
 
   
   const handleRemoveSlot = (id) => {
-    setSchedules(schedules.filter((slot) => slot.id !== id));
+    setSlotPendingRemoval(schedules.find((slot) => slot.id === id) || null);
+  };
+
+  const confirmRemoveSlot = () => {
+    setSchedules(schedules.filter((slot) => slot.id !== slotPendingRemoval.id));
+    setSlotPendingRemoval(null);
   };
 
   
@@ -231,6 +238,16 @@ const AvailabilityScheduler = ({ availabilities = [], onSave }) => {
           </button>
         </div>
       </form>
+
+      {slotPendingRemoval && (
+        <ConfirmModal
+          title="Remove time slot?"
+          message={`Remove ${daysOfWeek.find((d) => d.value === parseInt(slotPendingRemoval.day_of_week))?.label || "this"} ${slotPendingRemoval.start_time} - ${slotPendingRemoval.end_time}? This slot won't be available to patients until you add it back and save.`}
+          confirmLabel="Remove"
+          onConfirm={confirmRemoveSlot}
+          onCancel={() => setSlotPendingRemoval(null)}
+        />
+      )}
     </div>
   );
 };

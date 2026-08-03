@@ -14,7 +14,7 @@ const BookAppointmentPage = () => {
   const { doctorId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [doctor, setDoctor] = useState(null);
@@ -27,22 +27,20 @@ const BookAppointmentPage = () => {
     notes: ""
   });
 
-  
   useEffect(() => {
     const fetchDoctor = async () => {
       try {
         setLoading(true);
         const data = await getDoctorById(doctorId);
         setDoctor(data);
-        
-        
+
         if (data.consultation_fees && data.consultation_fees.length > 0) {
-          
-          const firstVisitFee = data.consultation_fees.find(fee => 
-            fee.consultation_type.toLowerCase().includes("first") || 
+
+          const firstVisitFee = data.consultation_fees.find(fee =>
+            fee.consultation_type.toLowerCase().includes("first") ||
             fee.consultation_type.toLowerCase().includes("video")
           ) || data.consultation_fees[0];
-          
+
           setSelectedFee(firstVisitFee);
         }
       } catch (error) {
@@ -57,11 +55,10 @@ const BookAppointmentPage = () => {
     fetchDoctor();
   }, [doctorId, navigate]);
 
-  
   useEffect(() => {
     const fetchTimeSlots = async () => {
       if (!doctorId || !selectedDate) return;
-      
+
       try {
         setLoading(true);
         const data = await getDoctorTimeSlots(doctorId, selectedDate);
@@ -77,7 +74,6 @@ const BookAppointmentPage = () => {
     fetchTimeSlots();
   }, [doctorId, selectedDate]);
 
-  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBookingData(prev => ({
@@ -86,14 +82,12 @@ const BookAppointmentPage = () => {
     }));
   };
 
-  
   const handleFeeChange = (e) => {
     const feeId = parseInt(e.target.value);
     const fee = doctor.consultation_fees.find(f => f.id === feeId);
     setSelectedFee(fee);
   };
 
-  
   const formatTime = (timeString) => {
     try {
       const time = parseISO(`2000-01-01T${timeString}`);
@@ -103,29 +97,28 @@ const BookAppointmentPage = () => {
     }
   };
 
-  
   const handleBookAppointment = async (e) => {
     e.preventDefault();
-    
+
     if (!user) {
       setAppointmentData(doctorId, selectedDate, selectedSlot?.id);
       navigate('/login', { state: { from: `/appointment/book/${doctorId}`, message: "Please login to book an appointment" } });
       return;
     }
-    
+
     if (!selectedSlot) {
       toast.error("Please select a time slot");
       return;
     }
-    
+
     if (!selectedFee) {
       toast.error("Please select a consultation type");
       return;
     }
-    
+
     try {
       setBookingLoading(true);
-      
+
       const appointmentData = {
         doctor_id: parseInt(doctorId),
         time_slot_id: selectedSlot.id,
@@ -133,13 +126,12 @@ const BookAppointmentPage = () => {
         symptoms: bookingData.symptoms,
         notes: bookingData.notes
       };
-      
+
       const response = await bookAppointment(appointmentData);
-      
-      // Clear appointment data from cookies after successful booking
+
       clearAppointmentData();
-      
-      navigate('/payment', { 
+
+      navigate('/payment', {
         state: {
           appointment_id: response.appointment_id,
           doctor_name: response.doctor_name,
@@ -149,7 +141,7 @@ const BookAppointmentPage = () => {
           payment_id: response.payment_id
         }
       });
-      
+
     } catch (error) {
       console.error("Error booking appointment:", error);
       toast.error(error.error || "Failed to book appointment");
@@ -158,11 +150,10 @@ const BookAppointmentPage = () => {
     }
   };
 
-  
   const generateDateOptions = () => {
     const options = [];
     const today = new Date();
-    
+
     for (let i = 1; i <= 30; i++) {
       const date = addDays(today, i);
       options.push({
@@ -170,7 +161,7 @@ const BookAppointmentPage = () => {
         label: format(date, 'EEEE, MMMM d, yyyy')
       });
     }
-    
+
     return options;
   };
 
@@ -198,7 +189,7 @@ const BookAppointmentPage = () => {
       <main className="min-h-screen bg-gray-50 pt-20 pb-16">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
-            
+
             <nav className="flex mb-6" aria-label="Breadcrumb">
               <ol className="inline-flex items-center space-x-1 md:space-x-3">
                 <li className="inline-flex items-center">
@@ -244,7 +235,7 @@ const BookAppointmentPage = () => {
             </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              
+
               <div className="md:col-span-1">
                 <div className="bg-white rounded-xl shadow-md p-6 mb-6">
                   <div className="flex items-center mb-4">
@@ -265,7 +256,6 @@ const BookAppointmentPage = () => {
                   </div>
                 </div>
 
-                
                 {doctor?.consultation_fees && doctor.consultation_fees.length > 0 && (
                   <div className="bg-white rounded-xl shadow-md p-6">
                     <h3 className="text-md font-semibold text-gray-800 mb-3">Consultation Fees</h3>
@@ -281,11 +271,10 @@ const BookAppointmentPage = () => {
                 )}
               </div>
 
-              
               <div className="md:col-span-2">
                 <div className="bg-white rounded-xl shadow-md p-6 mb-6">
                   <form onSubmit={handleBookAppointment}>
-                    
+
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">1. Select Date</h3>
                       <select
@@ -301,10 +290,9 @@ const BookAppointmentPage = () => {
                       </select>
                     </div>
 
-                    
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">2. Select Time Slot</h3>
-                      
+
                       {loading ? (
                         <div className="text-center py-4">
                           <svg className="animate-spin h-6 w-6 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -342,7 +330,6 @@ const BookAppointmentPage = () => {
                       )}
                     </div>
 
-                    
                     {doctor?.consultation_fees && doctor.consultation_fees.length > 0 && (
                       <div className="mb-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-3">3. Select Consultation Type</h3>
@@ -360,9 +347,9 @@ const BookAppointmentPage = () => {
                               <div className="ml-3 flex-1">
                                 <span className="block font-medium text-gray-700">{fee.consultation_type}</span>
                                 <span className="block text-sm text-gray-500">
-                                  {fee.consultation_type.toLowerCase().includes('video') 
+                                  {fee.consultation_type.toLowerCase().includes('video')
                                     ? 'Online consultation via video call'
-                                    : fee.consultation_type.toLowerCase().includes('follow') 
+                                    : fee.consultation_type.toLowerCase().includes('follow')
                                       ? 'Short follow-up consultation'
                                       : 'Standard consultation with the doctor'
                                   }
@@ -375,10 +362,9 @@ const BookAppointmentPage = () => {
                       </div>
                     )}
 
-                    
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">4. Provide Details</h3>
-                      
+
                       <div className="mb-4">
                         <label htmlFor="symptoms" className="block text-sm font-medium text-gray-700 mb-1">
                           Symptoms
@@ -393,7 +379,7 @@ const BookAppointmentPage = () => {
                           className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         ></textarea>
                       </div>
-                      
+
                       <div>
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
                           Additional Notes (Optional)
@@ -410,14 +396,12 @@ const BookAppointmentPage = () => {
                       </div>
                     </div>
 
-                    
                     <div className="mb-6 bg-gray-50 p-4 rounded-md">
                       <p className="text-sm text-gray-600">
                         By booking this appointment, you agree to our cancellation policy. Appointments can be cancelled up to 12 hours before the scheduled time for a full refund.
                       </p>
                     </div>
 
-                    
                     <div className="flex justify-end">
                       <button
                         type="submit"

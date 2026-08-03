@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import API from "../../utils/axios";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 const MedicineManagementPage = () => {
   const [medicines, setMedicines] = useState([]);
@@ -11,8 +12,7 @@ const MedicineManagementPage = () => {
     page: 1,
     pages: 1,
   });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const emptyFormData = {
     name: "",
     description: "",
     manufacturer: "",
@@ -22,39 +22,43 @@ const MedicineManagementPage = () => {
     in_stock: true,
     quantity: "0",
     prescription_required: false,
-  });
+  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMedicine, setEditingMedicine] = useState(null);
+  const [formData, setFormData] = useState(emptyFormData);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  
+  const fetchMedicines = async (page = pagination.page) => {
+    try {
+      setLoading(true);
+      const response = await API.get("/medicines/admin/all", {
+        params: { page, limit: 10 },
+      });
+
+      setMedicines(response.data.medicines);
+      setPagination({
+        total: response.data.pagination.total,
+        page: response.data.pagination.page,
+        pages: response.data.pagination.pages,
+      });
+    } catch (error) {
+      toast.error("Failed to load medicines");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        setLoading(true);
-        const response = await API.get("/medicines/admin/all", {
-          params: { page: pagination.page, limit: 10 },
-        });
+    fetchMedicines(pagination.page);
 
-        setMedicines(response.data.medicines);
-        setPagination({
-          total: response.data.pagination.total,
-          page: response.data.pagination.page,
-          pages: response.data.pagination.pages,
-        });
-      } catch (error) {
-        toast.error("Failed to load medicines");
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMedicines();
   }, [pagination.page]);
 
-  
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -63,7 +67,6 @@ const MedicineManagementPage = () => {
     }));
   };
 
-  
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -79,7 +82,6 @@ const MedicineManagementPage = () => {
       }
       setImageFile(file);
 
-      
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -91,7 +93,6 @@ const MedicineManagementPage = () => {
     }
   };
 
-  
   const handleClearImage = () => {
     setImageFile(null);
     setImagePreview(null);
@@ -100,23 +101,45 @@ const MedicineManagementPage = () => {
     }
   };
 
-  
+  const openAddModal = () => {
+    setEditingMedicine(null);
+    setFormData(emptyFormData);
+    setImageFile(null);
+    setImagePreview(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (medicine) => {
+    setEditingMedicine(medicine);
+    setFormData({
+      name: medicine.name || "",
+      description: medicine.description || "",
+      manufacturer: medicine.manufacturer || "",
+      price: medicine.price ?? "",
+      discount_price: medicine.discount_price ?? "",
+      category: medicine.category || "",
+      in_stock: medicine.in_stock,
+      quantity: String(medicine.quantity ?? "0"),
+      prescription_required: medicine.prescription_required,
+    });
+    setImageFile(null);
+    setImagePreview(medicine.image_url || null);
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       setIsSubmitting(true);
 
-      
       if (!formData.name || !formData.price) {
         toast.error("Name and price are required");
         return;
       }
 
-      
       const medicineFormData = new FormData();
 
-      
       Object.keys(formData).forEach((key) => {
         if (key === "in_stock" || key === "prescription_required") {
           medicineFormData.append(key, formData[key] ? "true" : "false");
@@ -133,55 +156,53 @@ const MedicineManagementPage = () => {
         }
       });
 
-      
       if (imageFile) {
         medicineFormData.append("image", imageFile);
       }
 
-      const response = await API.post("/medicines/add", medicineFormData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      if (editingMedicine) {
+        await API.put(`/medicines/${editingMedicine.id}`, medicineFormData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Medicine updated successfully");
+      } else {
+        await API.post("/medicines/add", medicineFormData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Medicine added successfully");
+      }
 
-      toast.success("Medicine added successfully");
       setIsModalOpen(false);
-
-      
-      setFormData({
-        name: "",
-        description: "",
-        manufacturer: "",
-        price: "",
-        discount_price: "",
-        category: "",
-        in_stock: true,
-        quantity: "0",
-        prescription_required: false,
-      });
+      setEditingMedicine(null);
+      setFormData(emptyFormData);
       setImageFile(null);
       setImagePreview(null);
 
-      
-      const updatedResponse = await API.get("/medicines/admin/all", {
-        params: { page: 1, limit: 10 },
-      });
-
-      setMedicines(updatedResponse.data.medicines);
-      setPagination({
-        total: updatedResponse.data.pagination.total,
-        page: 1,
-        pages: updatedResponse.data.pagination.pages,
-      });
+      await fetchMedicines(editingMedicine ? pagination.page : 1);
     } catch (error) {
-      toast.error("Failed to add medicine");
+      toast.error(editingMedicine ? "Failed to update medicine" : "Failed to add medicine");
       console.error(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  
+  const handleDeleteMedicine = async () => {
+    if (!deleteTarget) return;
+    try {
+      setIsDeleting(true);
+      await API.delete(`/medicines/${deleteTarget.id}`);
+      toast.success("Medicine deleted successfully");
+      setDeleteTarget(null);
+      await fetchMedicines(pagination.page);
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to delete medicine");
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.pages) {
       setPagination((prev) => ({ ...prev, page: newPage }));
@@ -196,14 +217,13 @@ const MedicineManagementPage = () => {
             Medicine Management
           </h1>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
           >
             Add New Medicine
           </button>
         </div>
 
-        
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
@@ -346,18 +366,20 @@ const MedicineManagementPage = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a
-                              href={`#edit-${medicine.id}`}
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(medicine)}
                               className="text-indigo-600 hover:text-indigo-900 mr-3"
                             >
                               Edit
-                            </a>
-                            <a
-                              href={`#delete-${medicine.id}`}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(medicine)}
                               className="text-red-600 hover:text-red-900"
                             >
                               Delete
-                            </a>
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -367,7 +389,6 @@ const MedicineManagementPage = () => {
               </div>
             </div>
 
-            
             {pagination.pages > 1 && (
               <div className="flex justify-center mt-6">
                 <nav
@@ -443,7 +464,6 @@ const MedicineManagementPage = () => {
           </>
         )}
 
-        
         {isModalOpen && (
           <div className="fixed inset-0 z-10 overflow-y-auto">
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -469,7 +489,7 @@ const MedicineManagementPage = () => {
                         className="text-lg leading-6 font-medium text-gray-900"
                         id="modal-headline"
                       >
-                        Add New Medicine
+                        {editingMedicine ? "Edit Medicine" : "Add New Medicine"}
                       </h3>
                       <div className="mt-4">
                         <form onSubmit={handleSubmit}>
@@ -723,6 +743,8 @@ const MedicineManagementPage = () => {
                         </svg>
                         Saving...
                       </span>
+                    ) : editingMedicine ? (
+                      "Update"
                     ) : (
                       "Save"
                     )}
@@ -730,7 +752,10 @@ const MedicineManagementPage = () => {
                   <button
                     type="button"
                     className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setEditingMedicine(null);
+                    }}
                   >
                     Cancel
                   </button>
@@ -738,6 +763,17 @@ const MedicineManagementPage = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {deleteTarget && (
+          <ConfirmModal
+            title="Delete medicine?"
+            message={`Remove "${deleteTarget.name}" from the store? Patients will no longer be able to find or order it.`}
+            confirmLabel={isDeleting ? "Deleting..." : "Delete"}
+            loading={isDeleting}
+            onConfirm={handleDeleteMedicine}
+            onCancel={() => setDeleteTarget(null)}
+          />
         )}
       </div>
     </DashboardLayout>

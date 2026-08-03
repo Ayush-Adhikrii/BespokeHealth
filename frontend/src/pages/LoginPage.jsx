@@ -36,18 +36,14 @@ const LoginPage = () => {
   };
 
   const handleSuccessfulLogin = () => {
-    // Check if there's appointment data in cookies
     const appointmentData = getAppointmentData();
     
     if (appointmentData.doctorId) {
-      // Clear the appointment data and redirect to booking page
       clearAppointmentData();
       navigate(`/appointment/book/${appointmentData.doctorId}`, { replace: true });
     } else if (location.state?.from) {
-      // Redirect to the original intended page
       navigate(location.state.from, { replace: true });
     } else {
-      // Default redirect to dashboard
       navigate("/dashboard", { replace: true });
     }
   };
@@ -133,7 +129,6 @@ const LoginPage = () => {
       await verifyEmail(email, otp, currentDeviceId);
       setRemainingAttempts(5);
       
-      // Add a small delay to ensure the trusted device is saved
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const response = await login({ email, password, deviceId: currentDeviceId }, rememberMe);

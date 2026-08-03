@@ -31,8 +31,7 @@ const getAllPatients = async (req, res) => {
             email: true,
             role: true,
             created_at: true,
-            email_verified: true,
-            kyc_status: true
+            email_verified: true
           }
         },
         appointments: {
@@ -87,8 +86,7 @@ const getPatientDetails = async (req, res) => {
             email: true,
             role: true,
             created_at: true,
-            email_verified: true,
-            kyc_status: true
+            email_verified: true
           }
         },
         appointments: {

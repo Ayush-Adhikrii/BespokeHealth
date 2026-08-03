@@ -61,7 +61,6 @@ const initiateKhaltiPayment = async (req, res) => {
 
     
     const amount = Math.round(parseFloat(payment.amount) * 100);
-    console.log("Amount:", process.env.KHALTI_SECRET_KEY);
 
     
     const khaltiResponse = await axios.post(
@@ -152,7 +151,7 @@ const verifyKhaltiPayment = async (req, res) => {
       { pidx },
       {
         headers: {
-          Authorization: `Key ${process.env.KHALTI_SECRET}`,
+          Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
       }
@@ -254,8 +253,79 @@ const processPayment = async (req, res) => {
 };
 
 
+const confirmDirectPayment = async (req, res) => {
+  const { paymentId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: parseInt(paymentId) },
+      include: {
+        appointment: {
+          include: {
+            patient: { include: { user: true } },
+            doctor: { include: { user: { select: { name: true } } } },
+            time_slot: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+
+    if (payment.appointment.patient.user.id !== userId) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    if (payment.status !== "pending") {
+      return res.status(400).json({ error: `Payment already ${payment.status}` });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: "completed",
+          payment_method: "direct",
+          transaction_id: `direct_${payment.appointment_id}_${Date.now()}`,
+        },
+      });
+
+      await tx.appointment.update({
+        where: { id: payment.appointment_id },
+        data: { status: "confirmed" },
+      });
+
+      await createNotification(
+        payment.appointment.patient.user.id,
+        `Your appointment with Dr. ${payment.appointment.doctor.user.name} has been confirmed.`,
+        "payment"
+      );
+
+      await createNotification(
+        payment.appointment.doctor.user.id,
+        `${payment.appointment.patient.user.name}'s appointment has been confirmed.`,
+        "payment"
+      );
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment confirmed",
+      appointment_id: payment.appointment_id,
+      appointment_date: payment.appointment.time_slot.date.toISOString().split("T")[0],
+      appointment_time: payment.appointment.time_slot.start_time.toISOString().substring(11, 16),
+    });
+  } catch (error) {
+    console.error("confirmDirectPayment error:", error);
+    res.status(500).json({ error: "Failed to confirm payment" });
+  }
+};
+
 const getPaymentDetails = async (req, res) => {
-  
+
 };
 
 module.exports = {
@@ -263,4 +333,5 @@ module.exports = {
   getPaymentDetails,
   initiateKhaltiPayment,
   verifyKhaltiPayment,
+  confirmDirectPayment,
 };

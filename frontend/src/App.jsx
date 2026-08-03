@@ -3,37 +3,49 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-d
 import { Toaster } from "sonner";
 import DashboardRouter from "./components/routers/DashboardRouter";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import ActivityLogPage from "./pages/admin/ActivityLogPage";
+import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import CustomersPage from "./pages/admin/CustomersPage";
 import DoctorsManagementPage from "./pages/admin/DoctorsManagementPage";
 import KYCRequestsPage from "./pages/admin/KYCRequestsPage";
 import MedicineManagementPage from "./pages/admin/MedicineManagementPage";
+import MedicineOrdersManagementPage from "./pages/admin/MedicineOrdersManagementPage";
 import PaymentsPage from "./pages/admin/PaymentsPage";
 import SystemAnalyticsPage from "./pages/admin/SystemAnalyticsPage";
 import AppointmentConfirmPage from "./pages/appointment/AppointmentConfirmPage";
 import TimeSlotSelectionPage from "./pages/appointment/TimeSlotSelectionPage";
 import BookAppointmentPage from "./pages/appointments/BookAppointmentPage";
 import MyAppointmentsPage from "./pages/appointments/MyAppointmentsPage";
-import InboxPage from "./pages/common/InboxPage";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import DoctorDashboard from "./pages/dashboards/DoctorDashboard";
 import PatientDashboard from "./pages/dashboards/PatientDashboard";
 import DoctorConsultationsPage from "./pages/doctor/DoctorConsultationsPage";
 import DoctorPatientsPage from "./pages/doctor/DoctorPatientsPage";
+import DoctorReviewsPage from "./pages/doctor/DoctorReviewsPage";
 import DoctorSchedulePage from "./pages/doctor/DoctorSchedulePage";
 import MyAvailabilityPage from "./pages/doctor/MyAvailabilityPage";
 import PatientDetailPage from "./pages/doctor/PatientDetailPage";
 import DoctorDetailPage from "./pages/DoctorDetailPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import DoctorsPage from "./pages/DoctorsPage";
 import KYCSubmissionPage from "./pages/KYCSubmissionPage";
+import KYCStatusPage from "./pages/KYCStatusPage";
+import AboutPage from "./pages/AboutPage";
+import ServicesPage from "./pages/ServicesPage";
+import ContactPage from "./pages/ContactPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import MedicineDetailPage from "./pages/MedicineDetailPage";
 import MedicineStorePage from "./pages/MedicineStorePage";
 import OtpVerificationPage from "./pages/OtpVerificationPage";
 import PatientPrescriptionsPage from "./pages/patient/PatientPrescriptionsPage";
+import HealthRecordsPage from "./pages/patient/HealthRecordsPage";
+import MedicineOrdersPage from "./pages/patient/MedicineOrdersPage";
 import PaymentCallbackPage from "./pages/payment/PaymentCallbackPage";
 import PaymentPage from "./pages/payment/PaymentPage";
+import MedicineCheckoutPage from "./pages/payment/MedicineCheckoutPage";
+import MedicineOrderSuccessPage from "./pages/payment/MedicineOrderSuccessPage";
 import ProfilePage from "./pages/ProfilePage";  
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ResetPassword from "./pages/ResetPassword";
@@ -60,8 +72,6 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   React.useEffect(() => {
-    console.log("App initialized with CSRF protection");
-    // Clear localStorage and sessionStorage to ensure they're empty
     clearAllLocalStorage();
     clearAllSessionStorage();
   }, []);
@@ -69,6 +79,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <CartProvider>
         <Toaster richColors position="top-right" />
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -77,10 +88,12 @@ function App() {
           <Route path="/verify-email" element={<OtpVerificationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/set-new-password" element={<ResetPasswordPage />} />
           <Route path="/set-new-password" element={<ResetPassword />} />
-          <Route path="/kyc-verification" element={<KYCSubmissionPage />} />
+          <Route path="/doctors" element={<DoctorsPage />} />
           <Route path="/doctors/:doctorId" element={<DoctorDetailPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route
             path="/dashboard"
             element={
@@ -138,6 +151,38 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/admin/medicine-orders"
+            element={
+              <ProtectedRoute>
+                <MedicineOrdersManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/medicine-orders"
+            element={
+              <ProtectedRoute>
+                <MedicineOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/medicine-checkout"
+            element={
+              <ProtectedRoute>
+                <MedicineCheckoutPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/medicine-order-success"
+            element={
+              <ProtectedRoute>
+                <MedicineOrderSuccessPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/appointment/book/:doctorId"
             element={
               <ProtectedRoute>
@@ -171,6 +216,14 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/health-records"
+            element={
+              <ProtectedRoute>
+                <HealthRecordsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/dashboard/patient"
             element={
               <ProtectedRoute>
@@ -195,10 +248,18 @@ function App() {
             }
           />
           <Route
-            path="/dashboard/kyc-requests"
+            path="/dashboard/reviews"
             element={
               <ProtectedRoute>
-                <KYCRequestsPage />
+                <DoctorReviewsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/reviews"
+            element={
+              <ProtectedRoute>
+                <AdminReviewsPage />
               </ProtectedRoute>
             }
           />
@@ -243,6 +304,30 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/kyc-submission"
+            element={
+              <ProtectedRoute>
+                <KYCSubmissionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/kyc-status"
+            element={
+              <ProtectedRoute>
+                <KYCStatusPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/kyc-requests"
+            element={
+              <ProtectedRoute>
+                <KYCRequestsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/dashboard/schedule"
             element={
               <ProtectedRoute>
@@ -275,22 +360,6 @@ function App() {
             }
           />
           <Route
-            path="/dashboard/inbox"
-            element={
-              <ProtectedRoute>
-                <InboxPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/inbox/:conversationId"
-            element={
-              <ProtectedRoute>
-                <InboxPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/dashboard/profile"
             element={
               <ProtectedRoute>
@@ -308,6 +377,7 @@ function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </CartProvider>
       </AuthProvider>
     </Router>
   );

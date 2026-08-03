@@ -5,13 +5,20 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import DashboardLayout from "../components/layouts/DashboardLayout";
 import API from "../utils/axios";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import MedicineOrderService from "../services/MedicineOrderService";
 
 const MedicineDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addItem } = useCart();
+  const { user } = useAuth();
   const [medicine, setMedicine] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [isEligible, setIsEligible] = useState(false);
 
   useEffect(() => {
     const fetchMedicineDetails = async () => {
@@ -30,6 +37,13 @@ const MedicineDetailPage = () => {
 
     fetchMedicineDetails();
   }, [id]);
+
+  useEffect(() => {
+    if (user?.role !== "Patient") return;
+    MedicineOrderService.getPrescriptionEligibility()
+      .then((data) => setIsEligible(data.eligible_medicine_ids.includes(parseInt(id))))
+      .catch((error) => console.error("Error fetching prescription eligibility:", error));
+  }, [id, user?.role]);
 
   
   const calculateDiscount = (original, discounted) => {
@@ -211,6 +225,52 @@ const MedicineDetailPage = () => {
                     <span className="font-medium">
                       {medicine.quantity} units
                     </span>
+                  </div>
+                )}
+
+                {medicine.in_stock && medicine.prescription_required && !isEligible && (
+                  <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      This medicine requires a valid prescription from a doctor before you can purchase it.
+                    </p>
+                    <Link
+                      to="/dashboard/prescriptions"
+                      className="mt-2 inline-block text-sm font-medium text-blue-700 hover:underline"
+                    >
+                      View my prescriptions
+                    </Link>
+                  </div>
+                )}
+
+                {medicine.in_stock && (!medicine.prescription_required || isEligible) && (
+                  <div className="mb-6 flex items-center gap-4">
+                    <div className="flex items-center border border-gray-300 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-l-lg"
+                      >
+                        −
+                      </button>
+                      <span className="px-4 py-2 text-gray-900 font-medium">{quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => setQuantity((q) => Math.min(medicine.quantity, q + 1))}
+                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-r-lg"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addItem(medicine, quantity);
+                        toast.success(`${quantity} × ${medicine.name} added to cart`);
+                      }}
+                      className="flex-1 px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Add to Cart
+                    </button>
                   </div>
                 )}
 

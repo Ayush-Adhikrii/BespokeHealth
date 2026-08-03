@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authController = require("../controller/authController");
 const { authenticateToken } = require("../middleware/auth");
-const { uploadCV } = require("../utils/fileUpload");
+const { uploadDoctorSignupPhoto } = require("../utils/fileUpload");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { PrismaClient } = require("@prisma/client");
@@ -33,7 +33,7 @@ const sensitiveLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-router.post("/signup", sensitiveLimiter, uploadCV.single("cv"), authController.signup);
+router.post("/signup", sensitiveLimiter, uploadDoctorSignupPhoto.single("photo"), authController.signup);
 router.post("/login", loginLimiter, authController.login);
 router.post("/verify-email", sensitiveLimiter, authController.verifyEmail);
 router.post("/forgot-password", sensitiveLimiter, authController.forgotPassword);

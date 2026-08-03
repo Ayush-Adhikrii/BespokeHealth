@@ -2,7 +2,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 const verifyOTP = async (email, otp) => {
@@ -10,15 +10,6 @@ const verifyOTP = async (email, otp) => {
   if (!user || user.otp !== otp || new Date() > user.otp_expires) {
     return false;
   }
-  await prisma.users.update({
-    where: { email },
-    data: { 
-      otp: null, 
-      otp_expires: null, 
-      email_verified: true // Set email as verified
-      // KYC status remains unchanged
-    },
-  });
   return true;
 };
 

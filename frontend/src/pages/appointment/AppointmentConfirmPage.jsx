@@ -18,10 +18,8 @@ const AppointmentConfirmPage = () => {
     notes: "",
   });
 
-  
   const appointmentDetails = location.state;
 
-  
   useEffect(() => {
     if (!user) {
       toast.error("Please log in to book an appointment");
@@ -35,7 +33,6 @@ const AppointmentConfirmPage = () => {
     console.log(user);
   }, [user, navigate, doctorId]);
 
-  
   useEffect(() => {
     if (!appointmentDetails) {
       toast.error("Missing appointment details");
@@ -43,7 +40,6 @@ const AppointmentConfirmPage = () => {
     }
   }, [appointmentDetails, navigate, doctorId]);
 
-  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -52,7 +48,6 @@ const AppointmentConfirmPage = () => {
     }));
   };
 
-  
   const formatTime = (timeString) => {
     try {
       const time = parseISO(`2000-01-01T${timeString}`);
@@ -62,7 +57,6 @@ const AppointmentConfirmPage = () => {
     }
   };
 
-  
   const handleBookAppointment = async (e) => {
     e.preventDefault();
 
@@ -79,7 +73,6 @@ const AppointmentConfirmPage = () => {
     try {
       setLoading(true);
 
-      
       const appointmentData = {
         doctor_id: parseInt(doctorId),
         time_slot_id: appointmentDetails.slotId,
@@ -90,7 +83,6 @@ const AppointmentConfirmPage = () => {
 
       console.log("Booking appointment with data:", appointmentData);
 
-      
       const bookingResponse = await AppointmentService.bookAppointment(appointmentData);
       console.log("Booking response:", bookingResponse);
 
@@ -100,9 +92,16 @@ const AppointmentConfirmPage = () => {
         );
       }
 
-      // Since payment is hardcoded to succeed, redirect to appointments page
-      toast.success("Appointment confirmed successfully!");
-      navigate("/dashboard/appointments", { replace: true });
+      navigate('/payment', {
+        state: {
+          appointment_id: bookingResponse.appointment_id,
+          doctor_name: bookingResponse.doctor_name,
+          appointment_date: bookingResponse.appointment_date,
+          appointment_time: bookingResponse.appointment_time,
+          payment_amount: bookingResponse.payment_amount,
+          payment_id: bookingResponse.payment_id
+        }
+      });
     } catch (error) {
       console.error("Error in appointment booking flow:", error);
       toast.error(error.message || "Failed to process appointment booking");
@@ -130,7 +129,7 @@ const AppointmentConfirmPage = () => {
       <Navbar />
       <div className="min-h-screen bg-gray-50 pt-20 pb-10">
         <div className="max-w-3xl mx-auto px-4 py-8">
-          
+
           <nav className="flex mb-8" aria-label="Breadcrumb">
             <ol className="inline-flex items-center space-x-1 md:space-x-3">
               <li className="inline-flex items-center">
@@ -157,7 +156,7 @@ const AppointmentConfirmPage = () => {
           </nav>
 
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            
+
             <div className="p-6 bg-blue-600 text-white">
               <h1 className="text-2xl font-bold">Confirm Your Appointment</h1>
               <p className="text-blue-100 mt-1">
@@ -165,7 +164,6 @@ const AppointmentConfirmPage = () => {
               </p>
             </div>
 
-            
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">
                 Appointment Details
@@ -214,7 +212,6 @@ const AppointmentConfirmPage = () => {
               </div>
             </div>
 
-            
             <form onSubmit={handleBookAppointment} className="p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">
                 Health Information
@@ -259,7 +256,6 @@ const AppointmentConfirmPage = () => {
                 </div>
               </div>
 
-              
               <div className="mt-6 bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-medium text-gray-800 mb-2">
                   Confirmation

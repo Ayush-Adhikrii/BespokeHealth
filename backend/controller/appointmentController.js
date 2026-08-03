@@ -16,7 +16,6 @@ const getDoctorTimeSlots = async (req, res) => {
         user: {
           select: {
             name: true,
-            kyc_status: true,
           },
         },
       },
@@ -26,7 +25,7 @@ const getDoctorTimeSlots = async (req, res) => {
       return res.status(404).json({ error: "Doctor not found" });
     }
 
-    if (doctor.user.kyc_status !== "Approved") {
+    if (!doctor.is_active) {
       return res
         .status(400)
         .json({ error: "Doctor is not currently available for appointments" });
@@ -187,7 +186,7 @@ const bookAppointment = async (req, res) => {
           patient_id,
           doctor_id: parseInt(doctor_id),
           time_slot_id,
-          status: "confirmed", // Changed from "pending" to "confirmed"
+          status: "pending",
           symptoms,
           notes,
         },
@@ -200,8 +199,8 @@ const bookAppointment = async (req, res) => {
           appointment_id: appointment.id,
           amount: consultationFee.amount,
           currency: consultationFee.currency,
-          payment_method: "khalti", // Changed from "pending" to "khalti"
-          status: "completed", // Changed from "pending" to "completed"
+          payment_method: "pending",
+          status: "pending",
         },
       });
       await logActivity(req.user.id, 'created_payment', `User created payment for appointmentId=${appointment.id}, paymentId=${payment.id}`);
@@ -225,12 +224,12 @@ const bookAppointment = async (req, res) => {
 
     await createNotification(
       patient.userId,
-      `Your appointment with Dr. ${doctor.user.name} has been confirmed for ${appointmentDate} at ${startTime}. Payment completed.`,
+      `Your appointment with Dr. ${doctor.user.name} has been booked for ${appointmentDate} at ${startTime}. Please complete payment to confirm.`,
       "appointment"
     );
 
     res.status(201).json({
-      message: "Appointment confirmed successfully!",
+      message: "Appointment booked successfully. Please complete payment to confirm your appointment.",
       appointment_id: result.appointment.id,
       doctor_name: timeSlot.doctor.user.name,
       appointment_date: timeSlot.date.toISOString().split("T")[0],
@@ -259,7 +258,6 @@ const getPatientAppointments = async (req, res) => {
     };
 
     if (status) {
-      // Handle multiple statuses for upcoming appointments
       if (status === "upcoming") {
         whereClause.status = {
           in: ["confirmed", "pending"]
@@ -364,14 +362,14 @@ const getDoctorAppointments = async (req, res) => {
         },
       },
       orderBy: [
-        { time_slot: { date: "asc" } },
-        { time_slot: { start_time: "asc" } },
+        { time_slot: { date: "desc" } },
+        { time_slot: { start_time: "desc" } },
       ],
       skip,
       take: parseInt(limit),
     });
 
-    
+
     const totalCount = await prisma.appointment.count({
       where: whereClause,
     });
@@ -552,7 +550,18 @@ const completeAppointment = async (req, res) => {
         .json({ error: "Appointment not found or unauthorized" });
     }
 
-    
+    const prescription = await prisma.prescription.findUnique({
+      where: { appointment_id: parseInt(appointmentId) },
+      include: { medications: true },
+    });
+
+    if (!prescription || !prescription.diagnosis || prescription.medications.length === 0) {
+      return res.status(400).json({
+        error: "Please add a diagnosis and at least one medication in the prescription before completing this consultation.",
+      });
+    }
+
+
     const updatedAppointment = await prisma.appointment.update({
       where: { id: parseInt(appointmentId) },
       data: {
@@ -582,69 +591,6 @@ const completeAppointment = async (req, res) => {
   }
 };
 
-
-async function initiateKhaltiPayment(paymentId) {
-  try {
-    const response = await fetch(`/api/payments/${paymentId}/khalti/initiate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      
-      window.location.href = data.payment_url;
-    } else {
-      console.error("Payment initiation failed:", data.error);
-      
-    }
-  } catch (error) {
-    console.error("Payment initiation error:", error);
-  }
-}
-
-
-async function verifyKhaltiPayment() {
-  
-  const urlParams = new URLSearchParams(window.location.search);
-  const pidx = urlParams.get("pidx");
-  const transaction_id = localStorage.getItem("transaction_id"); 
-
-  if (!pidx || !transaction_id) {
-    showError("Missing payment information");
-    return;
-  }
-
-  try {
-    const response = await fetch("/api/payments/khalti/verify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ pidx, transaction_id }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      
-      showSuccess("Payment successful! Your appointment is confirmed.");
-      
-      setTimeout(() => {
-        window.location.href = "/appointments";
-      }, 3000);
-    } else {
-      showError(`Payment verification failed: ${data.message}`);
-    }
-  } catch (error) {
-    console.error("Payment verification error:", error);
-    showError("An error occurred while verifying your payment");
-  }
-}
 
 
 const getDoctorSchedule = async (req, res) => {
@@ -772,6 +718,48 @@ const getDoctorSchedule = async (req, res) => {
   }
 };
 
+const getUnreadMessageCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    let chatRoomIds = [];
+
+    if (role === "Doctor") {
+      const doctorId = req.user.doctorProfile?.id;
+      if (!doctorId) return res.json({ count: 0 });
+      const appointments = await prisma.appointment.findMany({
+        where: { doctor_id: doctorId, chat_room: { isNot: null } },
+        select: { chat_room: { select: { id: true } } },
+      });
+      chatRoomIds = appointments.map((a) => a.chat_room.id);
+    } else if (role === "Patient") {
+      const patientProfile = req.user.patientProfile;
+      if (!patientProfile) return res.json({ count: 0 });
+      const appointments = await prisma.appointment.findMany({
+        where: { patient_id: patientProfile.id, chat_room: { isNot: null } },
+        select: { chat_room: { select: { id: true } } },
+      });
+      chatRoomIds = appointments.map((a) => a.chat_room.id);
+    }
+
+    if (chatRoomIds.length === 0) return res.json({ count: 0 });
+
+    const count = await prisma.chatMessage.count({
+      where: {
+        chat_room_id: { in: chatRoomIds },
+        sender_id: { not: userId },
+        read: false,
+      },
+    });
+
+    return res.json({ count });
+  } catch (error) {
+    console.error("getUnreadMessageCount error:", error);
+    return res.json({ count: 0 });
+  }
+};
+
 module.exports = {
   getDoctorTimeSlots,
   bookAppointment,
@@ -780,4 +768,5 @@ module.exports = {
   cancelAppointment,
   completeAppointment,
   getDoctorSchedule,
+  getUnreadMessageCount,
 };

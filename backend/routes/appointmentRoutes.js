@@ -5,9 +5,10 @@ const prescriptionController = require("../controller/prescriptionController");
 const consultationController = require("../controller/consultationController");
 const { authenticateToken, authorizeRoles } = require("../middleware/auth");
 const rateLimit = require('express-rate-limit');
+
 const postLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit each IP to 20 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: {
     error: 'Too many requests. Please try again after 15 minutes.'
   },
@@ -15,12 +16,10 @@ const postLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-
 router.get(
   "/doctors/:doctorId/time-slots",
   appointmentController.getDoctorTimeSlots
 );
-
 
 router.post(
   "/book",
@@ -36,7 +35,6 @@ router.get(
   authorizeRoles(["Patient"]),
   appointmentController.getPatientAppointments
 );
-
 
 router.get(
   "/doctor",
@@ -66,13 +64,11 @@ router.delete(
   appointmentController.cancelAppointment
 );
 
-
 router.put(
   "/:appointmentId/cancel",
   authenticateToken,
   appointmentController.cancelAppointment
 );
-
 
 router.post(
   "/:appointmentId/prescription",
@@ -95,7 +91,6 @@ router.get(
   prescriptionController.getDoctorPrescriptions
 );
 
-
 router.post(
   "/:appointmentId/notes",
   postLimiter,
@@ -116,6 +111,12 @@ router.get(
   authenticateToken,
   authorizeRoles(["Patient"]),
   prescriptionController.getPatientPrescriptions
+);
+
+router.get(
+  "/messages/unread-count",
+  authenticateToken,
+  appointmentController.getUnreadMessageCount
 );
 
 module.exports = router;

@@ -38,13 +38,12 @@ const setDoctorAvailability = async (req, res) => {
         });
       }
 
-      // Validate that end_time is after start_time
       const [startHour, startMinute] = slot.start_time.split(":").map(Number);
       const [endHour, endMinute] = slot.end_time.split(":").map(Number);
       const startMinutes = startHour * 60 + startMinute;
       let endMinutes = endHour * 60 + endMinute;
       if (endMinutes <= startMinutes) {
-        endMinutes += 24 * 60; // Handle overnight slots
+        endMinutes += 24 * 60;
       }
       if (endMinutes <= startMinutes) {
         return res.status(400).json({
@@ -53,21 +52,20 @@ const setDoctorAvailability = async (req, res) => {
       }
     }
 
-    // Assume input times are in NPT (UTC+5:45)
-    const timezoneOffsetMinutes = 5 * 60 + 45; // NPT offset
+    const timezoneOffsetMinutes = 5 * 60 + 45;
 
     const result = await prisma.$transaction(async (tx) => {
-      // Delete all previous availability entries for the doctor
+
       await tx.doctorAvailability.deleteMany({
         where: {
           doctor_id: doctorId,
         },
       });
 
-      // Delete all previous time slots for the doctor
       await tx.timeSlot.deleteMany({
         where: {
           doctor_id: doctorId,
+          appointments: { none: {} },
         },
       });
 
@@ -76,15 +74,13 @@ const setDoctorAvailability = async (req, res) => {
         const [startHour, startMinute] = slot.start_time.split(":").map(Number);
         const [endHour, endMinute] = slot.end_time.split(":").map(Number);
 
-        // Create local Date objects for reference
-        const refDate = new Date(1970, 0, 1); // Arbitrary reference date
+        const refDate = new Date(1970, 0, 1);
         const startTimeLocal = new Date(refDate);
         startTimeLocal.setHours(startHour, startMinute, 0, 0);
 
         const endTimeLocal = new Date(refDate);
         endTimeLocal.setHours(endHour, endMinute, 0, 0);
 
-        // Convert to UTC for database storage
         const startTimeUTC = new Date(
           startTimeLocal.getTime() - timezoneOffsetMinutes * 60 * 1000
         );
@@ -337,7 +333,6 @@ const getDoctorAvailability = async (req, res) => {
       },
     });
 
-    // Adjust times to NPT (UTC+5:45)
     const timezoneOffsetMinutes = 5 * 60 + 45;
     const formattedAvailabilities = availabilities.map((slot) => {
       const startTimeLocal = new Date(
@@ -410,7 +405,6 @@ const getOwnAvailability = async (req, res) => {
       },
     });
 
-    // Adjust times to NPT (UTC+5:45)
     const timezoneOffsetMinutes = 5 * 60 + 45;
     const formattedAvailabilities = availabilities.map((slot) => {
       const startTimeLocal = new Date(
@@ -472,7 +466,7 @@ const generateTimeSlotsForDoctor = async (
   doctorId,
   daysAhead
 ) => {
-  // Fetch doctor availabilities
+
   const availabilities = await prismaClient.doctorAvailability.findMany({
     where: {
       doctor_id: doctorId,
@@ -484,7 +478,6 @@ const generateTimeSlotsForDoctor = async (
     return [];
   }
 
-  // Verify doctor exists
   const doctor = await prismaClient.doctor.findUnique({
     where: { id: doctorId },
     select: { id: true },
@@ -497,17 +490,15 @@ const generateTimeSlotsForDoctor = async (
   const slotDurationMinutes = 30;
   const slots = [];
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Midnight in local timezone (NPT)
+  today.setHours(0, 0, 0, 0);
 
-  // Assume doctor's timezone is NPT (UTC+5:45)
-  const timezoneOffsetMinutes = 5 * 60 + 45; // NPT offset
+  const timezoneOffsetMinutes = 5 * 60 + 45;
 
   console.log(
     "Processing availabilities:",
     JSON.stringify(availabilities, null, 2)
   );
 
-  // Map availabilities by day of week
   const availabilitiesByDay = {};
   availabilities.forEach((avail) => {
     if (!availabilitiesByDay[avail.day_of_week]) {
@@ -516,14 +507,12 @@ const generateTimeSlotsForDoctor = async (
     availabilitiesByDay[avail.day_of_week].push(avail);
   });
 
-  // Find the next occurrence of each day_of_week
   for (let i = 0; i <= daysAhead; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
 
-    // Convert JavaScript getDay() (0=Sunday, 6=Saturday) to 1=Monday, 7=Sunday
     let jsDay = date.getDay();
-    let dayOfWeek = jsDay === 0 ? 7 : jsDay; // Map 0->7, 1->1, ..., 6->6
+    let dayOfWeek = jsDay === 0 ? 7 : jsDay;
 
     console.log(
       `Processing date ${date.toISOString().split("T")[0]}, day of week: ${dayOfWeek}`
@@ -535,11 +524,9 @@ const generateTimeSlotsForDoctor = async (
     for (const availability of dayAvailabilities) {
       console.log(`Processing availability: ${JSON.stringify(availability)}`);
 
-      // Convert UTC times to NPT
       const startTimeUTC = new Date(availability.start_time);
       const endTimeUTC = new Date(availability.end_time);
 
-      // Create Date objects for the specific date in UTC
       const slotDateUTC = new Date(Date.UTC(
         date.getFullYear(),
         date.getMonth(),
@@ -561,7 +548,6 @@ const generateTimeSlotsForDoctor = async (
         0, 0
       );
 
-      // Handle case where end time crosses midnight
       if (endDateTimeUTC <= startDateTimeUTC) {
         endDateTimeUTC.setUTCDate(endDateTimeUTC.getUTCDate() + 1);
       }
@@ -570,31 +556,27 @@ const generateTimeSlotsForDoctor = async (
         `Slot times (UTC): ${startDateTimeUTC.toISOString()} to ${endDateTimeUTC.toISOString()}`
       );
 
-      // For today, only generate slots starting from the current time
       let currentSlotUTC = new Date(startDateTimeUTC);
       if (i === 0) {
         const now = new Date();
-        // Convert now to UTC
+
         const nowUTC = new Date(now.getTime() - timezoneOffsetMinutes * 60 * 1000);
         if (nowUTC > startDateTimeUTC) {
-          // Round up to the next slot
+
           const minutesSinceStart = (nowUTC.getTime() - startDateTimeUTC.getTime()) / (60 * 1000);
           const slotsPassed = Math.ceil(minutesSinceStart / slotDurationMinutes);
           currentSlotUTC.setUTCMinutes(startTimeUTC.getUTCMinutes() + slotsPassed * slotDurationMinutes);
         }
       }
 
-      // Generate slots in UTC
       while (currentSlotUTC < endDateTimeUTC) {
         const slotEndUTC = new Date(currentSlotUTC);
         slotEndUTC.setUTCMinutes(slotEndUTC.getUTCMinutes() + slotDurationMinutes);
 
-        // Stop if the slot exceeds the exact end time
         if (slotEndUTC > endDateTimeUTC) {
           break;
         }
 
-        // Convert to NPT for logging
         const startNPT = new Date(currentSlotUTC.getTime() + timezoneOffsetMinutes * 60 * 1000);
         const endNPT = new Date(slotEndUTC.getTime() + timezoneOffsetMinutes * 60 * 1000);
         const formattedStart = startNPT.toTimeString().substring(0, 5);
@@ -619,7 +601,7 @@ const generateTimeSlotsForDoctor = async (
   console.log(`Generated ${slots.length} time slots`);
 
   if (slots.length > 0) {
-    // Remove duplicates by unique combination of doctor_id, date, start_time
+
     const uniqueSlots = [];
     const seen = new Set();
     for (const slot of slots) {
@@ -676,11 +658,10 @@ const getTimeSlotsForDoctor = async (req, res) => {
       },
     });
 
-    // Adjust times to NPT (UTC+5:45)
     const timezoneOffsetMinutes = 5 * 60 + 45;
 
     const formattedTimeSlots = timeSlots.map((slot) => {
-      // Convert UTC times from database to local time
+
       const startTimeLocal = new Date(
         slot.start_time.getTime() + timezoneOffsetMinutes * 60 * 1000
       );
