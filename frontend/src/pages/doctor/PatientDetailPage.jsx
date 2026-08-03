@@ -43,7 +43,7 @@ const PatientDetailPage = () => {
     try {
       const date = new Date(dateString);
       return format(date, "MMMM d, yyyy");
-    } catch (error) {
+    } catch {
       return "Invalid Date";
     }
   };
@@ -76,7 +76,7 @@ const PatientDetailPage = () => {
       }
       
       return age;
-    } catch (error) {
+    } catch {
       return "N/A";
     }
   };

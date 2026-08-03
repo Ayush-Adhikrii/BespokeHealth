@@ -19,7 +19,7 @@ const ActivityLogPage = () => {
       setPage(res.page);
       setPages(res.pages);
       setTotal(res.total);
-    } catch (err) {
+    } catch {
       setLogs([]);
     } finally {
       setLoading(false);

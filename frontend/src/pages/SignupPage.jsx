@@ -142,7 +142,7 @@ const SignupPage = () => {
     if (!validateForm()) return;
 
     try {
-      const { confirmPassword, ...signupData } = formData;
+      const { confirmPassword: _confirmPassword, ...signupData } = formData;
 
       let payload;
       if (formData.role === "Doctor") {

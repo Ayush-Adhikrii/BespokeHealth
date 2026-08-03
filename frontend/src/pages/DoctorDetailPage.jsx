@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import Footer from "../components/home/Footer";
 import Navbar from "../components/home/Navbar";
 import { useAuth } from "../context/AuthContext";
 import { getDoctorById } from "../services/DoctorService";
-import { setAppointmentData } from "../utils/cookie";
 import DoctorAvatar from "../components/common/DoctorAvatar";
 import DashboardLayout from "../components/layouts/DashboardLayout";
 import StarRating from "../components/common/StarRating";
@@ -21,7 +20,6 @@ const DoctorDetailPage = () => {
   const [reviewStats, setReviewStats] = useState({ avg_rating: 0, rating_count: 0 });
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const isAuthenticated = !!user;
 
@@ -76,21 +74,6 @@ const DoctorDetailPage = () => {
       return format(parseISO(dateString), "MMM d, yyyy");
     } catch {
       return dateString || "";
-    }
-  };
-
-  const handleBookAppointment = () => {
-    if (isAuthenticated) {
-      navigate(`/appointment/book/${doctorId}`);
-    } else {
-      
-      setAppointmentData(doctorId, "", "");
-      navigate("/login", {
-        state: {
-          from: `/doctors/${doctorId}`,
-          message: "Please login to book an appointment",
-        },
-      });
     }
   };
 

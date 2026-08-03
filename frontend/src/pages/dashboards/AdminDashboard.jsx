@@ -67,11 +67,6 @@ const AdminDashboard = () => {
   }, []);
 
   
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -467,7 +462,7 @@ const AdminDashboard = () => {
                           );
 
                         return Object.entries(statusCounts).map(
-                          ([status, count], index) => (
+                          ([status], index) => (
                             <Cell
                               key={`cell-${index}`}
                               fill={

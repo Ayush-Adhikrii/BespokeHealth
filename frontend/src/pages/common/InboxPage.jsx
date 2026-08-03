@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import MessageService from "../../services/MessageService";
 import { useAuth } from "../../context/AuthContext";
@@ -39,7 +39,7 @@ const InboxPage = () => {
           
           navigate(`/dashboard/inbox/${data.conversations[0].id}`);
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to load conversations");
       } finally {
         setLoading(false);
@@ -70,7 +70,7 @@ const InboxPage = () => {
             )
           );
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to load messages");
       }
     };
@@ -112,7 +112,7 @@ const InboxPage = () => {
       
       
       setNewMessage("");
-    } catch (error) {
+    } catch {
       toast.error("Failed to send message");
     } finally {
       setSendingMessage(false);
@@ -132,7 +132,7 @@ const InboxPage = () => {
       } else {
         return format(date, "MM/dd/yyyy");
       }
-    } catch (error) {
+    } catch {
       return "Unknown time";
     }
   };
@@ -148,7 +148,7 @@ const InboxPage = () => {
       } else {
         return format(date, "MMM d, yyyy 'at' h:mm a");
       }
-    } catch (error) {
+    } catch {
       return "Unknown time";
     }
   };

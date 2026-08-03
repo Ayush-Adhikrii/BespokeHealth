@@ -111,12 +111,12 @@ const CustomersPage = () => {
     try {
       const date = new Date(dateString);
       return format(date, "MMM d, yyyy");
-    } catch (error) {
+    } catch {
       return "Invalid Date";
     }
   };
 
-  
+
   const openPatientDetails = async (patientId) => {
     try {
       setLoading(true);
@@ -390,7 +390,18 @@ const CustomersPage = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                     
+                        <button
+                          onClick={() => openPatientDetails(patient.id)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => openEditModal(patient)}
+                          className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        >
+                          Edit
+                        </button>
                         <button
                           onClick={() => openEmailModal(patient)}
                           className="text-green-600 hover:text-green-900 mr-3"

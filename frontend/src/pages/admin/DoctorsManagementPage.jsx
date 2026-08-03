@@ -11,7 +11,6 @@ const DoctorsManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpeciality, setSelectedSpeciality] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("Inactive");
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -113,7 +112,7 @@ const DoctorsManagementPage = () => {
     try {
       const date = new Date(dateString);
       return format(date, "MMM d, yyyy");
-    } catch (error) {
+    } catch {
       return "Invalid Date";
     }
   };

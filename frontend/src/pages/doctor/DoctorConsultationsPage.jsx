@@ -68,7 +68,7 @@ const DoctorConsultationsPage = () => {
   const formatDate = (dateString) => {
     try {
       return format(parseISO(dateString), "MMMM d, yyyy");
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };
@@ -119,7 +119,7 @@ const DoctorConsultationsPage = () => {
       setIsCancelModalOpen(false);
       setCancellationReason("");
       fetchConsultations();
-    } catch (error) {
+    } catch {
       toast.error("Failed to cancel appointment");
     }
   };
@@ -217,8 +217,8 @@ const DoctorConsultationsPage = () => {
           instructions: med.instructions || ""
         })) : [{ name: "", dosage: "", frequency: "", duration: "", instructions: "" }]
       });
-    } catch (error) {
-      
+    } catch {
+
       setPrescription({
         diagnosis: "",
         doctor_notes: "",
@@ -611,7 +611,7 @@ const DoctorConsultationsPage = () => {
                             toast.success("Notes updated successfully");
                             setIsCompleteModalOpen(false);
                             fetchConsultations();
-                          } catch (error) {
+                          } catch {
                             toast.error("Failed to update notes");
                           }
                         } else {

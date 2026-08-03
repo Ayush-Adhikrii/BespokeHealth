@@ -647,7 +647,7 @@ const KYCRequestsPage = () => {
                                   );
                                 }
                                 return selectedKYC.permanent_address;
-                              } catch (e) {
+                              } catch {
                                 
                                 return selectedKYC.permanent_address;
                               }
@@ -697,7 +697,7 @@ const KYCRequestsPage = () => {
                                     );
                                   }
                                   return selectedKYC.temporary_address;
-                                } catch (e) {
+                                } catch {
                                   
                                   return selectedKYC.temporary_address;
                                 }

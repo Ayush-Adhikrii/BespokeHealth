@@ -95,15 +95,6 @@ const DoctorDashboard = () => {
     }
   }, [user]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
-  };
-
   const getGrowthClass = (growth) => {
     if (growth > 0) return "text-green-600";
     if (growth < 0) return "text-red-600";

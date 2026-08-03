@@ -1,13 +1,12 @@
 
 import { useEffect, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import DashboardLayout from "../components/layouts/DashboardLayout";
-import API from "../utils/axios";
-import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 import MedicineOrderService from "../services/MedicineOrderService";
+import API from "../utils/axios";
 
 const MedicineDetailPage = () => {
   const { id } = useParams();
@@ -45,7 +44,7 @@ const MedicineDetailPage = () => {
       .catch((error) => console.error("Error fetching prescription eligibility:", error));
   }, [id, user?.role]);
 
-  
+
   const calculateDiscount = (original, discounted) => {
     if (!discounted || discounted >= original) return null;
     return Math.round(((original - discounted) / original) * 100);
@@ -176,11 +175,10 @@ const MedicineDetailPage = () => {
                   )}
 
                   <span
-                    className={`px-2.5 py-0.5 rounded text-xs font-medium ${
-                      medicine.in_stock
+                    className={`px-2.5 py-0.5 rounded text-xs font-medium ${medicine.in_stock
                         ? "bg-green-100 text-green-800"
                         : "bg-red-100 text-red-800"
-                    }`}
+                      }`}
                   >
                     {medicine.in_stock ? "In Stock" : "Out of Stock"}
                   </span>

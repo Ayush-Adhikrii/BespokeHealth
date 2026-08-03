@@ -1,10 +1,7 @@
-import { useEffect, useState, useRef } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import DashboardLayout from "../../components/layouts/DashboardLayout";
 import { useAuth } from "../../context/AuthContext";
-import { getAllDoctors, getAllSpecialties } from "../../services/DoctorService";
-import PatientService from "../../services/PatientService";
 import DoctorBrowser from "../../components/home/DoctorBrowser";
 
 const quickLinks = [

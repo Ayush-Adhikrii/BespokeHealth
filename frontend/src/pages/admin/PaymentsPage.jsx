@@ -233,7 +233,7 @@ const PaymentsPage = () => {
 
     try {
       return format(new Date(dateString), "MMM d, yyyy h:mm a");
-    } catch (error) {
+    } catch {
       return "Invalid Date";
     }
   };

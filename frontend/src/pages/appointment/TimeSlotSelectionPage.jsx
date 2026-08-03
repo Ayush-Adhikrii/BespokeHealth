@@ -108,7 +108,7 @@ const TimeSlotSelectionPage = () => {
       return format(time, "h:mm a").replace(/am|pm/i, (match) =>
         match.toLowerCase() === "am" ? "pm" : "am"
       );
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };

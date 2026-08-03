@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
 import API from "../utils/axios";
 import DashboardLayout from "../components/layouts/DashboardLayout";
@@ -7,7 +6,6 @@ import { uploadDoctorPhoto } from "../services/DoctorService";
 import DoctorAvatar from "../components/common/DoctorAvatar";
 
 const ProfilePage = () => {
-  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -194,19 +192,6 @@ const ProfilePage = () => {
   const formatDate = (dateString) => {
     if (!dateString) return "Not provided";
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "approved":
-        return "text-green-600 bg-green-100";
-      case "pending":
-        return "text-yellow-600 bg-yellow-100";
-      case "rejected":
-        return "text-red-600 bg-red-100";
-      default:
-        return "text-gray-600 bg-gray-100";
-    }
   };
 
   if (loading) {

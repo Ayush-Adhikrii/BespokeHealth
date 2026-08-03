@@ -1,7 +1,6 @@
 
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
-import { getOrCreateDeviceId } from "../utils/deviceFingerprint";
 import { setCookie, getCookie, removeCookie, clearAllLocalStorage, clearAllSessionStorage } from "../utils/cookie";
 
 const API_URL = import.meta.env.VITE_API_URL || "https://localhost:3000/api";

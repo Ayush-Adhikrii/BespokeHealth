@@ -2,7 +2,7 @@ import axios from "axios";
 import { getCookie, removeCookie } from "./cookie";
 
 const API = axios.create({
-  baseURL: "https://localhost:3000/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://localhost:3000/api",
   timeout: 10000,
 });
 

@@ -8,7 +8,7 @@ const PrescriptionDetailModal = ({ isOpen, onClose, prescription }) => {
     try {
       if (!dateString) return "N/A";
       return format(parseISO(dateString), "MMMM d, yyyy");
-    } catch (error) {
+    } catch {
       return dateString || "N/A";
     }
   };

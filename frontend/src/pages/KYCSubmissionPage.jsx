@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast, Toaster } from "sonner"; 
+import { toast, Toaster } from "sonner";
 import DashboardLayout from "../components/layouts/DashboardLayout";
 import { useAuth } from "../context/AuthContext";
 import { getKYCStatus, submitKYC } from "../services/KycService";
@@ -9,13 +9,12 @@ const KYCSubmissionPage = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [kycStatus, setKycStatus] = useState(null);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    citizenship_front_file: null, 
-    citizenship_back_file: null, 
-    citizenship_front_preview: "", 
-    citizenship_back_preview: "", 
+    citizenship_front_file: null,
+    citizenship_back_file: null,
+    citizenship_front_preview: "",
+    citizenship_back_preview: "",
     permanent_address: {
       street: "",
       city: "",
@@ -33,14 +32,12 @@ const KYCSubmissionPage = () => {
     },
   });
 
-  
+
   useEffect(() => {
     const fetchKYCStatus = async () => {
       try {
         const data = await getKYCStatus();
-        setKycStatus(data);
 
-        
         if (data.status && data.status !== "Not Submitted") {
           navigate("/dashboard/kyc-status");
         }
@@ -52,7 +49,7 @@ const KYCSubmissionPage = () => {
     fetchKYCStatus();
   }, [navigate]);
 
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -73,7 +70,7 @@ const KYCSubmissionPage = () => {
     }
   };
 
-  
+
   const handleFileChange = (e) => {
     const { name, files } = e.target;
 
@@ -84,7 +81,7 @@ const KYCSubmissionPage = () => {
         toast.error("Only images (JPEG, PNG, JPG) are allowed");
         return;
       }
-      
+
       const fileKey =
         name === "citizenship_front"
           ? "citizenship_front_file"
@@ -94,13 +91,13 @@ const KYCSubmissionPage = () => {
           ? "citizenship_front_preview"
           : "citizenship_back_preview";
 
-      
+
       setFormData((prev) => ({
         ...prev,
         [fileKey]: file,
       }));
 
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData((prev) => ({
@@ -112,7 +109,7 @@ const KYCSubmissionPage = () => {
     }
   };
 
-  
+
   const handleSameAddressChange = (e) => {
     const { checked } = e.target;
 
@@ -123,24 +120,24 @@ const KYCSubmissionPage = () => {
         sameAsPermanent: checked,
         ...(checked
           ? {
-              street: formData.permanent_address.street,
-              city: formData.permanent_address.city,
-              state: formData.permanent_address.state,
-              postalCode: formData.permanent_address.postalCode,
-              country: formData.permanent_address.country,
-            }
+            street: formData.permanent_address.street,
+            city: formData.permanent_address.city,
+            state: formData.permanent_address.state,
+            postalCode: formData.permanent_address.postalCode,
+            country: formData.permanent_address.country,
+          }
           : {}),
       },
     });
   };
 
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    
+
     if (!formData.citizenship_front_file || !formData.citizenship_back_file) {
       setError("Please upload both front and back citizenship documents");
       setLoading(false);
@@ -148,8 +145,9 @@ const KYCSubmissionPage = () => {
     }
 
     try {
-      
-      const response = await submitKYC({
+
+
+      await submitKYC({
         citizenship_front_file: formData.citizenship_front_file,
         citizenship_back_file: formData.citizenship_back_file,
         permanent_address: formData.permanent_address,
@@ -158,30 +156,30 @@ const KYCSubmissionPage = () => {
           : formData.temporary_address,
       });
 
-      
+
       if (typeof updateUser === "function") {
-        
+
         updateUser({
           ...user,
           kyc_status: "In-Review",
         });
       } else {
-        
+
         console.log(
           "Note: User context couldn't be updated automatically, but KYC was submitted successfully"
         );
       }
 
-      
+
       toast.success("KYC information submitted successfully");
 
-      
+
       setTimeout(() => {
         navigate("/dashboard");
       }, 1500);
     } catch (err) {
       console.error("Error in submission:", err);
-      
+
       toast.error(err.error || "Failed to submit KYC information");
       setError(
         err.error || "Failed to submit KYC information. Please try again."
@@ -193,7 +191,7 @@ const KYCSubmissionPage = () => {
 
   return (
     <DashboardLayout>
-      
+
       <Toaster position="top-right" richColors closeButton />
 
       <div className="max-w-4xl mx-auto">
@@ -232,7 +230,7 @@ const KYCSubmissionPage = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             <div className="space-y-4">
               <h2 className="text-lg font-medium text-gray-900 border-b pb-2">
                 Identity Documents
@@ -353,7 +351,7 @@ const KYCSubmissionPage = () => {
               </div>
             </div>
 
-            
+
             <div className="space-y-4">
               <h2 className="text-lg font-medium text-gray-900 border-b pb-2">
                 Permanent Address
@@ -453,13 +451,13 @@ const KYCSubmissionPage = () => {
                     <option value="United States">United States</option>
                     <option value="Canada">Canada</option>
                     <option value="United Kingdom">United Kingdom</option>
-                    
+
                   </select>
                 </div>
               </div>
             </div>
 
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b pb-2">
                 <h2 className="text-lg font-medium text-gray-900">
@@ -573,14 +571,14 @@ const KYCSubmissionPage = () => {
                       <option value="United States">United States</option>
                       <option value="Canada">Canada</option>
                       <option value="United Kingdom">United Kingdom</option>
-                      
+
                     </select>
                   </div>
                 </div>
               )}
             </div>
 
-            
+
             <div className="space-y-4">
               <div className="flex items-start">
                 <div className="flex items-center h-5">

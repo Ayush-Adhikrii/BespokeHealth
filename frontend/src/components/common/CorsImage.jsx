@@ -5,13 +5,12 @@ const CorsImage = ({
   src, 
   alt, 
   className, 
-  onError, 
-  onLoad, 
-  fallbackSrc = null,
-  ...props 
+  onError,
+  onLoad,
+  ...props
 }) => {
   const [imageSrc, setImageSrc] = useState(src);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+// eslint-disable-next-line no-unused-vars -- motion.div is used in JSX below; this rule doesn't detect that pattern
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import DashboardLayout from "../components/layouts/DashboardLayout";
@@ -283,7 +284,7 @@ const MedicineStorePage = () => {
                             src={medicine.image_url}
                             alt={medicine.name}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
+                            onError={() => {
                               console.log("Failed to load image:", medicine.image_url);
                             }}
                             onLoad={() => {

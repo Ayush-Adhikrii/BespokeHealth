@@ -14,7 +14,7 @@ const LoginPage = () => {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [isDeviceIdReady, setIsDeviceIdReady] = useState(false);
-  const [remainingAttempts, setRemainingAttempts] = useState(5);
+  const [_remainingAttempts, setRemainingAttempts] = useState(5);
   const [lockoutMessage, setLockoutMessage] = useState("");
   const { login, sendOtp, verifyEmail, loading } = useAuth();
   const navigate = useNavigate();

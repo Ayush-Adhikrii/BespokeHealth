@@ -45,7 +45,7 @@ const AppointmentBookingPage = () => {
     try {
       const time = parseISO(`2000-01-01T${timeString}`);
       return format(time, "h:mm a");
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };

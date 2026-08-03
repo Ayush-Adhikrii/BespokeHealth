@@ -64,7 +64,7 @@ const DoctorPatientsPage = () => {
     try {
       const date = new Date(dateString);
       return format(date, "MMM d, yyyy");
-    } catch (error) {
+    } catch {
       return "Invalid Date";
     }
   };

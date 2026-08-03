@@ -20,7 +20,7 @@ const StartConversationModal = ({ isOpen, onClose, doctor }) => {
       toast.success("Message sent successfully");
       onClose();
       navigate(`/dashboard/inbox/${response.conversation.id}`);
-    } catch (error) {
+    } catch {
       toast.error("Failed to send message");
     } finally {
       setSending(false);

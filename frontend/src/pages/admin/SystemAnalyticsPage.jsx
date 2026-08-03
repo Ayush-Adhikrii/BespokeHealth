@@ -117,7 +117,7 @@ const SystemAnalyticsPage = () => {
       const data = await AnalyticsService.getAnalyticsOverview();
       setOverview(data);
       setLoading(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load analytics overview");
       setLoading(false);
     }
@@ -172,7 +172,7 @@ const SystemAnalyticsPage = () => {
       }
 
       setLoading(false);
-    } catch (error) {
+    } catch {
       toast.error(`Failed to load ${tab} analytics`);
       setLoading(false);
     }
@@ -458,7 +458,7 @@ const SystemAnalyticsPage = () => {
                     );
 
                   return Object.entries(statusCounts).map(
-                    ([status, count], index) => (
+                    ([status], index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={
@@ -496,11 +496,6 @@ const SystemAnalyticsPage = () => {
       users: item.count,
     }));
 
-    
-    const approvalRate = Number(userData.kycMetrics.approvalRate);
-    const avgProcessingHours = Number(
-      userData.kycMetrics.averageProcessingHours
-    );
 
     return (
       <div className="space-y-6">
@@ -1204,7 +1199,6 @@ const SystemAnalyticsPage = () => {
 
     
     const totalRevenue = parseRevenue(revenueData.overview.totalRevenue);
-    const currencyUnit = revenueData.overview.currencyUnit || "Rs.";
 
     
     const revenueTrends = revenueData.trends.data.map((item) => ({

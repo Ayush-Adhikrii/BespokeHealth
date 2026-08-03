@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 import fs from 'fs';
 import path from 'path';
 
-const certDir = path.resolve(__dirname, '.cert');
+const certDir = path.resolve(import.meta.dirname, '.cert');
 const keyPath = path.join(certDir, 'key.pem');
 const certPath = path.join(certDir, 'cert.pem');
 

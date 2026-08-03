@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
+import { format, parseISO, addDays } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "../../context/AuthContext";
 import { getDoctorById } from "../../services/DoctorService";
@@ -92,7 +92,7 @@ const BookAppointmentPage = () => {
     try {
       const time = parseISO(`2000-01-01T${timeString}`);
       return format(time, 'h:mm a');
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };

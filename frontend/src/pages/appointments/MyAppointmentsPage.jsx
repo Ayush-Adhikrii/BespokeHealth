@@ -113,7 +113,7 @@ const MyAppointmentsPage = () => {
     try {
       const time = parseISO(`2000-01-01T${timeString}`);
       return format(time, "h:mm a");
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };
@@ -121,7 +121,7 @@ const MyAppointmentsPage = () => {
   const formatDate = (dateString) => {
     try {
       return format(parseISO(dateString), "EEEE, MMMM d, yyyy");
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };
