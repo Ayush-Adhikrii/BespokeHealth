@@ -1,43 +1,13 @@
 require("dotenv").config();
 const express = require("express");
-const http = require("http");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { PrismaClient } = require("@prisma/client");
 const rateLimit = require("express-rate-limit");
-const fs = require("fs");
-const https = require("https");
-const path = require("path");
 
 const app = express();
 const prisma = new PrismaClient();
-
-const certDir = path.resolve(__dirname, ".cert");
-const keyPath = path.join(certDir, "key.pem");
-const certPath = path.join(certDir, "cert.pem");
-
-let server;
-let useHttps = false;
-let httpsOptions = {};
-try {
-  if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-    httpsOptions = {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-    };
-    useHttps = true;
-  }
-} catch (err) {
-  console.warn("Could not load HTTPS certs:", err);
-}
-
-if (useHttps) {
-  server = https.createServer(httpsOptions, app);
-} else {
-  server = http.createServer(app);
-  console.warn("Running without HTTPS!");
-}
 
 prisma
   .$connect()
@@ -64,6 +34,10 @@ const limiter = rateLimit({
   }
 });
 app.use(limiter);
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 const authRoutes = require("./routes/authRoutes");
 const fileRoutes = require("./routes/fileRoutes");
@@ -104,11 +78,4 @@ app.use("/api/medicine-orders", medicineOrderRoutes);
 const { handleFileUploadErrors } = require("./middleware/errorHandler");
 app.use(handleFileUploadErrors);
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  if (useHttps) {
-    console.log(`Server running on https://localhost:${PORT}`);
-  } else {
-    console.log(`Server running on https://localhost:${PORT}`);
-  }
-});
+module.exports = app;
