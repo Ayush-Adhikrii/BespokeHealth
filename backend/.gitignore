@@ -3,3 +3,4 @@ node_modules
 models
 .env
 prisma/generated
+.cert
