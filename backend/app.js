@@ -15,8 +15,13 @@ prisma
   .catch((error) => console.error("PostgreSQL connection failed:", error));
 
 app.use(helmet());
+const allowedOrigins = ["https://localhost:5173", "http://localhost:5173"];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-origin: ["https://localhost:5173", "http://localhost:5173"],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-temp-device-id'],
