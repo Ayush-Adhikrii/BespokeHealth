@@ -1,0 +1,32 @@
+databases:
+  - name: bespokehealth-db
+    plan: free
+    databaseName: bespokehealth_db
+    user: bespokehealth_db_user
+
+services:
+  - type: web
+    name: bespokehealth-backend
+    runtime: image
+    image:
+      url: ghcr.io/ayush-adhikrii/bespokehealth-backend:latest
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bespokehealth-db
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: KHALTI_PUBLIC_KEY
+        sync: false
+      - key: KHALTI_SECRET_KEY
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
