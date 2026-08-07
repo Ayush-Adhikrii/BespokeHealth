@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const helmet = require("helmet");
+const morgan = require("morgan");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { PrismaClient } = require("@prisma/client");
@@ -15,6 +16,7 @@ prisma
   .catch((error) => console.error("PostgreSQL connection failed:", error));
 
 app.use(helmet());
+app.use(morgan("tiny"));
 const allowedOrigins = ["https://localhost:5173", "http://localhost:5173"];
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
