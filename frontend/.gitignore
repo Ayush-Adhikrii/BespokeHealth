@@ -26,3 +26,6 @@ build
 *.sw?
 
 .cert
+
+.vercel
+.env*
