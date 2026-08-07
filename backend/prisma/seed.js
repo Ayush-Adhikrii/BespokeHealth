@@ -39,7 +39,7 @@ async function seedDoctors() {
       kyc_status: "Approved",
     });
 
-    await prisma.doctor.upsert({
+    const doctor = await prisma.doctor.upsert({
       where: { userId: user.id },
       update: {},
       create: {
@@ -51,6 +51,20 @@ async function seedDoctors() {
         is_active: true,
       },
     });
+
+    const existingFees = await prisma.consultationFee.count({
+      where: { doctor_id: doctor.id },
+    });
+
+    if (existingFees === 0) {
+      await prisma.consultationFee.createMany({
+        data: [
+          { doctor_id: doctor.id, consultation_type: "Video Consultation", amount: 800 },
+          { doctor_id: doctor.id, consultation_type: "In-Person Visit", amount: 1200 },
+          { doctor_id: doctor.id, consultation_type: "Follow-up Consultation", amount: 500 },
+        ],
+      });
+    }
 
     console.log(`Seeded ${email}`);
   }
